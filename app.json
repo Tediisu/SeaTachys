@@ -8,7 +8,11 @@
     "scheme": "seatachys",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.siegfredexpo.SeaTachys",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +21,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.siegfredexpo.SeaTachys"
     },
     "web": {
       "output": "static",
@@ -39,6 +44,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5fe5dacb-fba4-4806-bbef-31408d25af83"
+      }
     }
   }
 }
