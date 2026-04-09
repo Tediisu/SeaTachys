@@ -14,6 +14,12 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    primary: '#002347',
+    primaryShade1: '#003366',
+    primaryShade2: '#003F7D',
+    accent: '#FF8E00',
+    accentShade: '#FD7702',
+    accentPressed: '#FF5003',
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +27,12 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    primary: '#002347',
+    primaryShade1: '#003366',
+    primaryShade2: '#003F7D',
+    accent: '#FF8E00',
+    accentShade: '#FD7702',
+    accentPressed: '#FF5003',
   },
 } as const;
 
@@ -51,6 +63,8 @@ export const Fonts = Platform.select({
   },
 });
 
+
+
 export const Spacing = {
   half: 2,
   one: 4,
@@ -59,6 +73,30 @@ export const Spacing = {
   four: 24,
   five: 32,
   six: 64,
+} as const;
+
+export const FontSize = {
+  xs: 11,
+  small: 13,
+  body: 15,
+  subtitle: 17,
+  title: 20,
+  heading: 24,
+  display: 32,
+} as const;
+
+export const Radius = {
+  small: 6,
+  medium: 12,
+  large: 20,
+  full: 999,
+} as const;
+
+export const FontWeight = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
