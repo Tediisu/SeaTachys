@@ -78,7 +78,7 @@ export const Spacing = {
 export const FontSize = {
   xs: 11,
   small: 13,
-  body: 15,
+  body: 16,
   subtitle: 17,
   title: 20,
   heading: 24,

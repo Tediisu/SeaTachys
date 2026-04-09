@@ -1,20 +1,22 @@
 import { Pressable, Text, StyleSheet, ViewStyle } from 'react-native';
+import { ReactNode } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, Radius, FontSize } from '@/constants/theme';
 
 type ButtonVariant = 'primary' | 'outline' | 'ghost';
-type ButtonSize = 'small' | 'medium' | 'large';
+type ButtonSize = 'boxSmall' | 'small' | 'medium' | 'large';
 
 interface ButtonProps {
-  label: string;
+  label?: string;
   onPress: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
   style?: ViewStyle;
   radius?: number;
+  icon?: ReactNode;
 }
 
-export default function Button({ label, onPress, variant = 'primary', size = 'small', radius = Radius.full , style }: ButtonProps) {
+export default function Button({ label, onPress, variant = 'primary', size = 'small', radius = Radius.full , style, icon }: ButtonProps) {
   const colors = useTheme();
 
   const variantStyles = {
@@ -38,9 +40,10 @@ export default function Button({ label, onPress, variant = 'primary', size = 'sm
   };
 
   const sizeStyles = {
-    small:  { width: 100, height: 40, },
-    medium: { width: 180, height: 50, },
-    large:  { width: 280, height: 56, },
+    boxSmall: {width: 50, height: 50},
+    small:  { width: 80, height: 60},
+    medium: { width: 120, height: 60},
+    large:  { width: 280, height: 56},
   };
 
   return (
@@ -55,7 +58,8 @@ export default function Button({ label, onPress, variant = 'primary', size = 'sm
       ]}
       onPress={onPress}
     >
-      <Text style={[styles.label, textStyles[variant]]}>{label}</Text>
+      {icon && icon}
+      {label && <Text style={[styles.label, textStyles[variant]]}>{label}</Text>}
     </Pressable>
   );
 }
