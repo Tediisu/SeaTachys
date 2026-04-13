@@ -1,4 +1,4 @@
-import { StyleSheet, View, Pressable, Text, TextInput } from 'react-native';
+import { StyleSheet, View, Pressable, Text, TextInput, ScrollView, FlatList, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -6,6 +6,11 @@ import { BottomTabInset, MaxContentWidth, Spacing, FontSize } from '@/constants/
 import Button from '@/components/ui/Button';
 import { Dimensions } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
+import { mockProducts, Product } from '@/constants/mock-data';
+import ProductCard from '@/components/ui/Product-Card';
+import { useProductFilter } from '@/hooks/product-filter';
+// import { useProductFilter } from '@/hooks/product-filter';
+
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -14,6 +19,7 @@ const { width, height } = Dimensions.get('window');
 export default function Home() {
 
   const colors = useTheme();
+  const { selectedCategory, setSelectedCategory, filteredProducts } = useProductFilter();
 
   return (
     <ThemedView style={styles.container}>
@@ -27,8 +33,10 @@ export default function Home() {
             style={{ paddingHorizontal: 0 }}
           />
           <View style={styles.deliveryLoc}>
-            <ThemedText>DELIVER TO</ThemedText>
-            <ThemedText>NIGGERIA</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">DELIVER TO</ThemedText>
+            <ThemedText type="smallBold" themeColor="textSecondary">Rawr Bldg</ThemedText>
+            {/* <Text>DELIVER TO</Text>
+            <Text>Rawr Bldg.</Text> */}
           </View>
           <View style={styles.cart}>
             <Button
@@ -54,10 +62,15 @@ export default function Home() {
           </View>
         </View>
         <View style={styles.categories}>
-          <View>
-            <Text>All Categories</Text>
+          <View style={styles.categoriesHeader}>
+            <ThemedText type="small" themeColor="textSecondary">All Categories</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">See all {'>'}</ThemedText>
           </View>
-          <View style={styles.categories2}>
+          <ScrollView 
+            horizontal
+            // showsHorizontalScrollIndicator={false}
+             contentContainerStyle={styles.categories2}
+          >
             <Button
               onPress={() => console.log('hehehePressed')}
               size="small"
@@ -76,9 +89,28 @@ export default function Home() {
               radius={15}
               style={{ paddingHorizontal: 0 }}
             />
-          </View>
+              <Button
+              onPress={() => console.log('hehehePressed')}
+              size="medium"
+              radius={15}
+              style={{ paddingHorizontal: 0 }}
+            />
+          </ScrollView>
         </View>
         <View style={styles.categorylist}>
+            <FlatList
+              data={mockProducts}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <ProductCard
+                  item={item}
+                  onPress={() => console.log('pressed', item.name)}
+                />
+              )}
+              scrollEnabled={true}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: Spacing.six }}
+            />
         </View>
       </SafeAreaView>
     </ThemedView>
@@ -88,18 +120,18 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    // justifyContent: 'center',
+    // flexDirection: 'row',
   },
   safeArea: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'stretch',
     paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    // maxWidth: 'MaxContentWidth',
   },
   header: {
     width: width,        
-    height: height * 0.1, 
+    height: height * 0.12, 
     backgroundColor: 'red',
     flexDirection: 'row',
     padding: 5,
@@ -112,19 +144,21 @@ const styles = StyleSheet.create({
     flex: 1,      
     height: height * 0.06, 
     backgroundColor: 'white',
-    fontSize: FontSize.body,
+    justifyContent: 'center',
+    flexDirection: 'column',
+    // fontSize: FontSize.body,
   },
   cart: {
 
   },
   greetings: {
-    width: width,        
+    // width: width,        
     height: height * 0.05, 
     backgroundColor: 'white',
     padding: 10,
   },
   searchbar: {
-    width: width,        
+    // width: width,        
     height: height * 0.06, 
     backgroundColor: 'red',
     justifyContent: 'center',
@@ -142,22 +176,25 @@ const styles = StyleSheet.create({
   },
   searchInput: {
   flex: 1,
-  fontSize: FontSize.body,
+  // fontSize: FontSize.body,
   fontWeight: '500',
   },
   categories: {
-    width: width,        
-    height: height * 0.15, 
+    // width: width,        
+    // height: height * 0.15, 
     backgroundColor: 'white',
+    // padding: 10,
+  },
+  categoriesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 10,
   },
   categories2: {
-    flex: 1,
     flexDirection: 'row',
-    width: width,        
-    height: height * 0.2, 
     gap: Spacing.three,
-    padding: 20,
+    padding: 15,
   },
   categorylist: {
     // width: width,        
