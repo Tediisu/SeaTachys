@@ -1,0 +1,6 @@
+@SeaTachys.Api_HostAddress = http://localhost:5076
+
+GET {{SeaTachys.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
