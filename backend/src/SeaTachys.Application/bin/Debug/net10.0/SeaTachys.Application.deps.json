@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "SeaTachys.Application/1.0.0": {
+        "dependencies": {
+          "SeaTachys.Domain": "1.0.0"
+        },
+        "runtime": {
+          "SeaTachys.Application.dll": {}
+        }
+      },
+      "SeaTachys.Domain/1.0.0": {
+        "runtime": {
+          "SeaTachys.Domain.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "SeaTachys.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "SeaTachys.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

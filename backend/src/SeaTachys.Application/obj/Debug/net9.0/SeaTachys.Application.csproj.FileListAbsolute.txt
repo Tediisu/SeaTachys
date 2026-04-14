@@ -8,6 +8,7 @@
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachys.Application.AssemblyInfoInputs.cache
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachys.Application.AssemblyInfo.cs
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachys.Application.csproj.CoreCompileInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachys.Application.sourcelink.json
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachy.D1B414BC.Up2Date
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/SeaTachys.Application.dll
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net9.0/refint/SeaTachys.Application.dll
