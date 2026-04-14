@@ -10,6 +10,7 @@
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachys.Infrastructure.AssemblyInfoInputs.cache
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachys.Infrastructure.AssemblyInfo.cs
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachys.Infrastructure.csproj.CoreCompileInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachys.Infrastructure.sourcelink.json
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachy.B3F939F0.Up2Date
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/SeaTachys.Infrastructure.dll
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net9.0/refint/SeaTachys.Infrastructure.dll

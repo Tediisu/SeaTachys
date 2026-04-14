@@ -163,11 +163,47 @@ public class OrdersController : ControllerBase
         var userId = Guid.Parse(userIdStr);
 
         var orders = await _db.Orders
-            .Include(o => o.Items)
-            .ThenInclude(i => i.Options)
-            .Where(o => o.CustomerId == userId)
-            .OrderByDescending(o => o.PlacedAt)
-            .ToListAsync();
+        .Where(o => o.CustomerId == userId)
+        .OrderByDescending(o => o.PlacedAt)
+        .Select(o => new
+        {
+            o.Id,
+            o.OrderNumber,
+            o.Status,
+            o.Subtotal,
+            o.DeliveryFee,
+            o.DiscountAmount,
+            o.TotalAmount,
+            o.DeliveryStreet,
+            o.DeliveryBarangay,
+            o.DeliveryCity,
+            o.DeliveryLat,
+            o.DeliveryLng,
+            o.CustomerNote,
+            o.PlacedAt,
+            o.ConfirmedAt,
+            o.ReadyAt,
+            o.PickedUpAt,
+            o.DeliveredAt,
+            o.CancelledAt,
+            Items = o.Items.Select(i => new
+            {
+                i.Id,
+                i.MenuItemId,
+                i.ItemName,
+                i.UnitPrice,
+                i.Quantity,
+                i.Subtotal,
+                i.SpecialInstructions,
+                Options = i.Options.Select(opt => new
+                {
+                    opt.GroupLabel,
+                    opt.ChoiceName,
+                    opt.AdditionalPrice
+                })
+            })
+        })
+        .ToListAsync();
 
         return Ok(orders);
     }

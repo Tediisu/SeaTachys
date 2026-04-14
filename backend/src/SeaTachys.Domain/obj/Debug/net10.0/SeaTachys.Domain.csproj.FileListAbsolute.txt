@@ -1,0 +1,12 @@
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/bin/Debug/net10.0/SeaTachys.Domain.deps.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/bin/Debug/net10.0/SeaTachys.Domain.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/bin/Debug/net10.0/SeaTachys.Domain.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.AssemblyInfoInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.AssemblyInfo.cs
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.csproj.CoreCompileInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.sourcelink.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/refint/SeaTachys.Domain.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/SeaTachys.Domain.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Domain/obj/Debug/net10.0/ref/SeaTachys.Domain.dll

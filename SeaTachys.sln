@@ -1,0 +1,53 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "backend", "backend", "{1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{0F9113EE-888A-26D2-68B0-4A7D0A2A8745}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaTachys.Domain", "backend\src\SeaTachys.Domain\SeaTachys.Domain.csproj", "{BE1B2581-381C-3A44-CF87-157A85DC643E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaTachys.Infrastructure", "backend\src\SeaTachys.Infrastructure\SeaTachys.Infrastructure.csproj", "{A6834BBA-0FB8-4643-9E3C-D892EBB556F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaTachys.Api", "backend\src\SeaTachys.Api\SeaTachys.Api.csproj", "{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SeaTachys.Application", "backend\src\SeaTachys.Application\SeaTachys.Application.csproj", "{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BE1B2581-381C-3A44-CF87-157A85DC643E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE1B2581-381C-3A44-CF87-157A85DC643E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE1B2581-381C-3A44-CF87-157A85DC643E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE1B2581-381C-3A44-CF87-157A85DC643E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6834BBA-0FB8-4643-9E3C-D892EBB556F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6834BBA-0FB8-4643-9E3C-D892EBB556F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6834BBA-0FB8-4643-9E3C-D892EBB556F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6834BBA-0FB8-4643-9E3C-D892EBB556F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{0F9113EE-888A-26D2-68B0-4A7D0A2A8745} = {1AE8ACA6-933B-BF2A-3671-3E2EAC007D16}
+		{BE1B2581-381C-3A44-CF87-157A85DC643E} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+		{A6834BBA-0FB8-4643-9E3C-D892EBB556F7} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+		{347C84AC-8E3C-1C77-5FFF-1A4CA19B70C9} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+		{6D5EC2F6-407D-53BC-EE6C-04E5F11A40EF} = {0F9113EE-888A-26D2-68B0-4A7D0A2A8745}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9D256E67-B851-4F64-A9AF-F88D47666DDC}
+	EndGlobalSection
+EndGlobal
