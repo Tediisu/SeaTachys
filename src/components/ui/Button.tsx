@@ -21,7 +21,7 @@ export default function Button({ label, onPress, variant = 'primary', size = 'sm
 
   const variantStyles = {
     primary: {
-      backgroundColor: colors.accent,
+      backgroundColor: colors.primary,
     },
     outline: {
       backgroundColor: 'transparent',

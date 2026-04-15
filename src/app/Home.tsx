@@ -26,6 +26,7 @@ export default function Home() {
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.header}>
           <Button
+            variant="primary"
             onPress={() => console.log('hehehePressed')}
             icon={<FontAwesome6 name="bars" size={24} color="white" />}
             size="boxSmall"
@@ -71,7 +72,7 @@ export default function Home() {
             // showsHorizontalScrollIndicator={false}
              contentContainerStyle={styles.categories2}
           >
-            <Button
+            {/* <Button
               onPress={() => console.log('hehehePressed')}
               size="small"
               radius={15}
@@ -94,7 +95,8 @@ export default function Home() {
               size="medium"
               radius={15}
               style={{ paddingHorizontal: 0 }}
-            />
+            /> */}
+
           </ScrollView>
         </View>
         <View style={styles.categorylist}>
@@ -109,7 +111,11 @@ export default function Home() {
               )}
               scrollEnabled={true}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: Spacing.six }}
+              contentContainerStyle={{ 
+                paddingBottom: Spacing.six + BottomTabInset, 
+                paddingHorizontal: 15,
+                paddingTop: 15,
+              }}
             />
         </View>
       </SafeAreaView>
@@ -120,6 +126,7 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'white',
     // justifyContent: 'center',
     // flexDirection: 'row',
   },
@@ -132,7 +139,6 @@ const styles = StyleSheet.create({
   header: {
     width: width,        
     height: height * 0.12, 
-    backgroundColor: 'red',
     flexDirection: 'row',
     padding: 5,
     paddingLeft: 15,
@@ -160,7 +166,6 @@ const styles = StyleSheet.create({
   searchbar: {
     // width: width,        
     height: height * 0.06, 
-    backgroundColor: 'red',
     justifyContent: 'center',
     padding: 10,
   },
@@ -195,10 +200,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.three,
     padding: 15,
+
   },
   categorylist: {
     // width: width,        
     // height: height * 1, 
-    // backgroundColor: 'red',
+    backgroundColor: 'white',
+    flex: 1,
   }
 });
