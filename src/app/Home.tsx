@@ -1,25 +1,28 @@
-import { StyleSheet, View, Pressable, Text, TextInput, ScrollView, FlatList, Image } from 'react-native';
+import { StyleSheet, View, Pressable, Text, TextInput, ScrollView, FlatList, Image, Dimensions } from 'react-native';
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing, FontSize } from '@/constants/theme';
 import Button from '@/components/ui/Button';
-import { Dimensions } from 'react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { mockProducts, Product } from '@/constants/mock-data';
 import ProductCard from '@/components/ui/Product-Card';
 import { useProductFilter } from '@/hooks/product-filter';
+import CategoryButton  from '@/components/ui/Category-Button'
 // import { useProductFilter } from '@/hooks/product-filter';
-
+import SideBar from '@/components/ui/Side-Bar'
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '@/hooks/use-auth';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Home() {
-
+  const { user, loading } = useAuth();
   const colors = useTheme();
   const { selectedCategory, setSelectedCategory, filteredProducts } = useProductFilter();
+  const [ isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
     <ThemedView style={styles.container}>
@@ -27,10 +30,10 @@ export default function Home() {
         <View style={styles.header}>
           <Button
             variant="primary"
-            onPress={() => console.log('hehehePressed')}
+            onPress={() => setIsSidebarOpen(true)}
             icon={<FontAwesome6 name="bars" size={24} color="white" />}
             size="boxSmall"
-            radius={15}
+            radius={50}
             style={{ paddingHorizontal: 0 }}
           />
           <View style={styles.deliveryLoc}>
@@ -50,7 +53,7 @@ export default function Home() {
           </View>
         </View>
         <View style={styles.greetings}>
-          <Text>Hello Guest! Greetings</Text>
+            <ThemedText type="small" themeColor='primary'>Hello {user?.fullname || 'There'}! Greetings</ThemedText>
         </View>
         <View style={styles.searchbar}>
           <View style={styles.sbar}>
@@ -65,43 +68,45 @@ export default function Home() {
         <View style={styles.categories}>
           <View style={styles.categoriesHeader}>
             <ThemedText type="small" themeColor="textSecondary">All Categories</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">See all {'>'}</ThemedText>
+            <Pressable onPress={() => setSelectedCategory('All')}>
+              <ThemedText type="small" themeColor="textSecondary">See all {'>'}</ThemedText>
+            </Pressable>
           </View>
           <ScrollView 
             horizontal
             // showsHorizontalScrollIndicator={false}
              contentContainerStyle={styles.categories2}
           >
-            {/* <Button
-              onPress={() => console.log('hehehePressed')}
-              size="small"
-              radius={15}
-              style={{ paddingHorizontal: 0 }}
+            <CategoryButton image={require('@/assets/imgs/wave.png')} 
+              label="All"
+              isSelected={selectedCategory === 'All'}
+              onPress={() => setSelectedCategory('All')}
             />
-            <Button
-              onPress={() => console.log('hehehePressed')}
-              size="medium"
-              radius={15}
-              style={{ paddingHorizontal: 0 }}
+            <CategoryButton image={require('@/assets/imgs/fish.png')} 
+              label="Fish"
+              isSelected={selectedCategory === 'Fish'}
+              onPress={() => setSelectedCategory('Fish')}
             />
-            <Button
-              onPress={() => console.log('hehehePressed')}
-              size="medium"
-              radius={15}
-              style={{ paddingHorizontal: 0 }}
+            <CategoryButton image={require('@/assets/imgs/shrimp.png')} 
+              label="Crustacean"
+              isSelected={selectedCategory === 'Crustacean'}
+              onPress={() => setSelectedCategory('Crustacean')}
             />
-              <Button
-              onPress={() => console.log('hehehePressed')}
-              size="medium"
-              radius={15}
-              style={{ paddingHorizontal: 0 }}
-            /> */}
-
+            <CategoryButton image={require('@/assets/imgs/shellfish.png')} 
+              label="Shellfish"
+              isSelected={selectedCategory === 'Shellfish'}
+              onPress={() => setSelectedCategory('Shellfish')}
+            />
+            <CategoryButton image={require('@/assets/imgs/squid.png')} 
+              label="Cephalopod"
+              isSelected={selectedCategory === 'Cephalopod'}
+              onPress={() => setSelectedCategory('Cephalopod')}
+            />
           </ScrollView>
         </View>
         <View style={styles.categorylist}>
             <FlatList
-              data={mockProducts}
+              data={filteredProducts}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <ProductCard
@@ -119,6 +124,7 @@ export default function Home() {
             />
         </View>
       </SafeAreaView>
+      <SideBar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)}/>
     </ThemedView>
   );
 }
@@ -206,6 +212,5 @@ const styles = StyleSheet.create({
     // width: width,        
     // height: height * 1, 
     backgroundColor: 'white',
-    flex: 1,
   }
 });

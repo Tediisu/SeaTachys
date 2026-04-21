@@ -3,7 +3,7 @@ import { ReactNode } from 'react';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing, Radius, FontSize } from '@/constants/theme';
 
-type ButtonVariant = 'primary' | 'outline' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' |'outline' | 'ghost';
 type ButtonSize = 'boxSmall' | 'small' | 'medium' | 'large';
 
 interface ButtonProps {
@@ -23,6 +23,9 @@ export default function Button({ label, onPress, variant = 'primary', size = 'sm
     primary: {
       backgroundColor: colors.primary,
     },
+    secondary: {
+      backgroundColor: colors.accent,
+    },
     outline: {
       backgroundColor: 'transparent',
       borderWidth: 1.5,
@@ -35,6 +38,7 @@ export default function Button({ label, onPress, variant = 'primary', size = 'sm
 
   const textStyles = {
     primary: { color: '#ffffff' },
+    secondary: { color: '#ffffff' },
     outline: { color: colors.accent },
     ghost: { color: colors.accent },
   };

@@ -1048,19 +1048,19 @@
     ]
   },
   "packageFolders": {
-    "/Users/keanuensomo/.nuget/packages/": {}
+    "C:\\Users\\SlimShady\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/SeaTachys.Api.csproj",
+      "projectUniqueName": "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Api\\SeaTachys.Api.csproj",
       "projectName": "SeaTachys.Api",
-      "projectPath": "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/SeaTachys.Api.csproj",
-      "packagesPath": "/Users/keanuensomo/.nuget/packages/",
-      "outputPath": "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/",
+      "projectPath": "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Api\\SeaTachys.Api.csproj",
+      "packagesPath": "C:\\Users\\SlimShady\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/Users/keanuensomo/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\SlimShady\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
@@ -1072,11 +1072,11 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/SeaTachys.Application.csproj": {
-              "projectPath": "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/SeaTachys.Application.csproj"
+            "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Application\\SeaTachys.Application.csproj": {
+              "projectPath": "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Application\\SeaTachys.Application.csproj"
             },
-            "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/SeaTachys.Infrastructure.csproj": {
-              "projectPath": "/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/SeaTachys.Infrastructure.csproj"
+            "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Infrastructure\\SeaTachys.Infrastructure.csproj": {
+              "projectPath": "C:\\Users\\SlimShady\\Documents\\SeaTachys\\backend\\src\\SeaTachys.Infrastructure\\SeaTachys.Infrastructure.csproj"
             }
           }
         }
@@ -1133,7 +1133,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.201/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.AspNetCore": "(,10.0.32767]",
           "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

@@ -18,8 +18,8 @@ export type Category = {
 
 export const mockCategories: Category[] = [
   { id: '1', name: 'Fish', icon: '🐟' },
-  { id: '2', name: 'Shellfish', icon: '🦪' },
-  { id: '3', name: 'Crustacean', icon: '🦀' },
+  { id: '2', name: 'Crustacean', icon: '🦀' },
+  { id: '3', name: 'Shellfish', icon: '🦪' },
   { id: '4', name: 'Cephalopod', icon: '🦑' },
 ];
 
@@ -53,7 +53,7 @@ export const mockProducts: Product[] = [
         name: 'Fish Ball',
         price: 99.99,
         description: "Fish balls are a popular street food in the Philippines and are so ingrained in our food culture that every Filipino has, for sure, some \"fishball\" childhood memory.",
-        image: require('@/assets/images/crispy-shrimp.jpg'),
+        image: require('@/assets/images/fish-balls.jpg'),
         category: 'Fish',
         rating: 4.5,
         isAvailable: true,
@@ -77,7 +77,7 @@ export const mockProducts: Product[] = [
         name: 'Rellenong Alimango',
         price: 99.99,
         description: "Rellenong Alimango, or Stuffed Crab, is a show-stopping appetizer worth the effort. This stuffed crab filled with crab meat and veggies is perfect for a party or for a special date night.",
-        image: require('@/assets/images/crispy-shrimp.jpg'),
+        image: require('@/assets/images/rellenong-alimango.jpg'),
         category: 'Crustacean',
         rating: 4.5,
         isAvailable: true,
