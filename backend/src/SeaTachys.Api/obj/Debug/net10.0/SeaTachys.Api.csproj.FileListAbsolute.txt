@@ -1,0 +1,109 @@
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/appsettings.Development.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/appsettings.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api.staticwebassets.endpoints.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api.deps.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api.runtimeconfig.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Api.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.EntityFrameworkCore.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.EntityFrameworkCore.Abstractions.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.EntityFrameworkCore.Relational.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.Abstractions.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.JsonWebTokens.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.Logging.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.IdentityModel.Tokens.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Microsoft.OpenApi.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Npgsql.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.Swagger.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.SwaggerGen.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.SwaggerUI.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Application.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Domain.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Infrastructure.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Application.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Infrastructure.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/bin/Debug/net10.0/SeaTachys.Domain.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.csproj.AssemblyReference.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/rpswa.dswa.cache.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.GeneratedMSBuildEditorConfig.editorconfig
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.AssemblyInfoInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.AssemblyInfo.cs
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.csproj.CoreCompileInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.MvcApplicationPartsAssemblyInfo.cs
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.MvcApplicationPartsAssemblyInfo.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.sourcelink.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/rjimswa.dswa.cache.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/rjsmrazor.dswa.cache.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/rjsmcshtml.dswa.cache.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/scopedcss/bundle/SeaTachys.Api.styles.css
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/staticwebassets.build.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/staticwebassets.build.json.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/staticwebassets.development.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/staticwebassets.build.endpoints.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/swae.build.ex.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachy.B34D3329.Up2Date
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/refint/SeaTachys.Api.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/SeaTachys.Api.genruntimeconfig.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Api/obj/Debug/net10.0/ref/SeaTachys.Api.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\appsettings.Development.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\appsettings.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.staticwebassets.endpoints.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.exe
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.deps.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.runtimeconfig.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Api.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Abstractions.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Relational.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.Abstractions.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.JsonWebTokens.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.Logging.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.IdentityModel.Tokens.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Microsoft.OpenApi.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Npgsql.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Application.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Domain.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Infrastructure.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Application.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Infrastructure.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\bin\Debug\net10.0\SeaTachys.Domain.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.csproj.AssemblyReference.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\rpswa.dswa.cache.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.AssemblyInfoInputs.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.AssemblyInfo.cs
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.csproj.CoreCompileInputs.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\rjimswa.dswa.cache.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\scopedcss\bundle\SeaTachys.Api.styles.css
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\staticwebassets.build.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\staticwebassets.build.json.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\staticwebassets.development.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\staticwebassets.build.endpoints.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\swae.build.ex.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachy.B34D3329.Up2Date
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\refint\SeaTachys.Api.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\SeaTachys.Api.genruntimeconfig.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Api\obj\Debug\net10.0\ref\SeaTachys.Api.dll

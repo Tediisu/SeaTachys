@@ -1,0 +1,31 @@
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/bin/Debug/net10.0/SeaTachys.Application.deps.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/bin/Debug/net10.0/SeaTachys.Application.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/bin/Debug/net10.0/SeaTachys.Application.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/bin/Debug/net10.0/SeaTachys.Domain.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/bin/Debug/net10.0/SeaTachys.Domain.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.csproj.AssemblyReference.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.AssemblyInfoInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.AssemblyInfo.cs
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.csproj.CoreCompileInputs.cache
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.sourcelink.json
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachy.D1B414BC.Up2Date
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/refint/SeaTachys.Application.dll
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/SeaTachys.Application.pdb
+/Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Application/obj/Debug/net10.0/ref/SeaTachys.Application.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\bin\Debug\net10.0\SeaTachys.Application.deps.json
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\bin\Debug\net10.0\SeaTachys.Application.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\bin\Debug\net10.0\SeaTachys.Application.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\bin\Debug\net10.0\SeaTachys.Domain.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\bin\Debug\net10.0\SeaTachys.Domain.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.csproj.AssemblyReference.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.AssemblyInfoInputs.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.AssemblyInfo.cs
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.csproj.CoreCompileInputs.cache
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachy.D1B414BC.Up2Date
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\refint\SeaTachys.Application.dll
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\SeaTachys.Application.pdb
+C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Application\obj\Debug\net10.0\ref\SeaTachys.Application.dll
