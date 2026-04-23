@@ -62,8 +62,8 @@ export default function Login() {
                 <View style={styles.userInfo}>
                     <TextInput
                         placeholder='Email'
-                        placeholderTextColor={colors.textSecondary}
-                        style={[styles.searchInput, { color: colors.background }]}
+                        placeholderTextColor={colors.primaryShade}
+                        style={[styles.searchInput, { color: colors.text }]}
                         value={email}
                         onChangeText={setEmail}
                     />
@@ -73,10 +73,10 @@ export default function Login() {
                     <TextInput
                     placeholder='Password'
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.searchInput, { color: colors.background }]}
+                    style={[styles.searchInput, { color: colors.text }]}
                     value={password}
                     onChangeText={setPassword}
-                    secureTextEntry={true}
+                    secureTextEntry={false}
                     />
                 </View>
                 <View style={styles.rememberMe}>

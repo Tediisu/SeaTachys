@@ -16,21 +16,3 @@
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net10.0/refint/SeaTachys.Infrastructure.dll
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net10.0/SeaTachys.Infrastructure.pdb
 /Users/keanuensomo/Desktop/My Projects/Mobile Development/SeaTachys/backend/src/SeaTachys.Infrastructure/obj/Debug/net10.0/ref/SeaTachys.Infrastructure.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Infrastructure.deps.json
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Infrastructure.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Infrastructure.pdb
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Application.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Domain.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Application.pdb
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\bin\Debug\net10.0\SeaTachys.Domain.pdb
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.csproj.AssemblyReference.cache
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.AssemblyInfoInputs.cache
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.AssemblyInfo.cs
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.csproj.CoreCompileInputs.cache
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.sourcelink.json
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachy.B3F939F0.Up2Date
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\refint\SeaTachys.Infrastructure.dll
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\SeaTachys.Infrastructure.pdb
-C:\Users\SlimShady\Documents\SeaTachys\backend\src\SeaTachys.Infrastructure\obj\Debug\net10.0\ref\SeaTachys.Infrastructure.dll
