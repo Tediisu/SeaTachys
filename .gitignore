@@ -32,6 +32,11 @@ yarn-error.*
 
 # local env files
 .env*.local
+/backend/src/SeaTachys.Api/.env
+
+# .NET build output
+**/bin/
+**/obj/
 
 # typescript
 *.tsbuildinfo

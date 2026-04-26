@@ -106,7 +106,14 @@ export default function SideBar({ isOpen, onClose }: Props) {
 
           </View>
           <View style={styles.box2}>
-            <MenuItem icon={<Feather name="shopping-bag" size={18} color="#2476e1" />} label="Cart" />
+            <MenuItem
+              icon={<Feather name="shopping-bag" size={18} color="#2476e1" />}
+              label="Cart"
+              onPress={() => {
+                onClose();
+                router.push('/(user)/Cart');
+              }}
+            />
             <MenuItem icon={<Feather name="heart" size={18} color="#db24e1" />} label="Favorites" />
             <MenuItem icon={<Ionicons name="notifications-outline" size={18} color="#e1be24" />} label="Notifications" />
             <MenuItem icon={<Feather name="credit-card" size={18} color="#24cee1" />} label="Payment" />

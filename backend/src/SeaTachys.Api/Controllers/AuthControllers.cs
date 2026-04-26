@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SeaTachys.Domain.Entities;
+using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -36,7 +37,7 @@ public class AuthController : ControllerBase
             FullName = req.FullName,
             Email = req.Email.ToLowerInvariant(),
             PhoneNumber = req.PhoneNumber,
-            Role = req.Role
+            Role = UserRole.customer
         };
         user.PasswordHash = _hasher.HashPassword(user, req.Password);
 
@@ -95,5 +96,5 @@ public class AuthController : ControllerBase
     }
 }
 
-public record RegisterRequest(string FullName, string Email, string Password, string? PhoneNumber, SeaTachys.Domain.Enums.UserRole Role);
+public record RegisterRequest(string FullName, string Email, string Password, string? PhoneNumber);
 public record LoginRequest(string Email, string Password);

@@ -1,11 +1,13 @@
 import { useTheme } from '@/hooks/use-theme';
 import {
-    Animated,
-    Image,
-    ImageSourcePropType,
-    Pressable,
-    StyleSheet, View
+  Animated,
+  Image,
+  ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  View,
 } from 'react-native';
+import { FontSize } from '@/constants/theme';
 import { ThemedText } from '../themed-text';
 
 type ButtonVariant = 'dark' | 'light';
@@ -18,7 +20,7 @@ interface CategoryButtonProps {
 }
 
 export default function CategoryButton({ image, label, isSelected = false, onPress}: CategoryButtonProps) {
-    const  colors = useTheme();
+    const colors = useTheme();
     const scaleAnim = new Animated.Value(1);
 
     const onPressIn = () => {
@@ -35,19 +37,15 @@ export default function CategoryButton({ image, label, isSelected = false, onPre
         }).start();
     };
 
-    const variantStyles = {
-        dark: {
-            backgroundColor: colors.primary,
-        },
-        light: {
-            backgroundColor: colors.background,  
-        },
-    }
-
     return (
         <Animated.View style={{ transform: [{scale: scaleAnim }]}}>
             <Pressable 
-                style={[styles.button, {backgroundColor: isSelected ? colors.primaryShade3 : colors.primary}]}
+                style={[
+                    styles.button,
+                    {
+                        backgroundColor: isSelected ? colors.accent : '#0F2F57',
+                    },
+                ]}
                 onPressIn={onPressIn}
                 onPressOut={onPressOut}
                 onPress={onPress}
@@ -55,7 +53,7 @@ export default function CategoryButton({ image, label, isSelected = false, onPre
                 <View style={styles.imageContainer}>
                     <Image source={image} style={styles.img}/>
                 </View>
-                <ThemedText>{label}</ThemedText>
+                <ThemedText style={styles.label}>{label}</ThemedText>
             </Pressable>
         </Animated.View>
     );
@@ -64,36 +62,37 @@ export default function CategoryButton({ image, label, isSelected = false, onPre
 
 const styles = StyleSheet.create({
     button: {
-        height: 70,
-        borderRadius: 25,
+        minHeight: 68,
+        borderRadius: 22,
         flexDirection: 'row', 
         alignItems: 'center', 
         alignSelf: 'flex-start',
         paddingLeft: 10,
-        gap: 10,  
-        shadowColor: '#000',
+        gap: 10,
+        shadowColor: '#00172F',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 1,
-        shadowRadius: 10,
-        elevation: 10,
-        padding: 20,
+        shadowOpacity: 0.12,
+        shadowRadius: 14,
+        elevation: 5,
+        paddingVertical: 9,
+        paddingRight: 18,
     },
     imageContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25, 
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         backgroundColor: 'white', 
         overflow: 'hidden',
         justifyContent: 'center', 
         alignItems: 'center', 
-        shadowColor: '#000',
-        shadowOffset: { width: 10, height: 10 },
-        shadowOpacity: 1,
-        shadowRadius: 10,
-        elevation: 10,
     },
     img: {
-        width: 50,
-        height: 50,
-    }
-})
+        width: 48,
+        height: 48,
+    },
+    label: {
+        color: '#FFFFFF',
+        fontSize: FontSize.body,
+        fontWeight: '700',
+    },
+});

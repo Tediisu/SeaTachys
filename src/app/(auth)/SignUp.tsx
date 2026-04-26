@@ -1,7 +1,5 @@
-import { StyleSheet, View, Pressable, Text, TextInput,
-     ScrollView, FlatList, Image, Dimensions 
-} from 'react-native';
-import { BottomTabInset, MaxContentWidth, Spacing, FontSize } from '@/constants/theme';
+import { StyleSheet, View, TextInput, Image, Dimensions } from 'react-native';
+import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import Button from '@/components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,11 +7,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { apiFetch } from '@/services/api';
 
-import Ionicons from '@expo/vector-icons/Ionicons';
-
-const { width, height } = Dimensions.get('window');
-const API_URL = 'http://10.72.8.55:5076';
+const { height } = Dimensions.get('window');
 
 export default function SignUp() {
     const colors = useTheme();  
@@ -27,6 +23,11 @@ export default function SignUp() {
     const [ error, setError ] = useState('');
 
     const handleSignUp = async () => {
+        if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+            setError('Please fill in all fields');
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -35,28 +36,15 @@ export default function SignUp() {
         setLoading(true);
         setError('');
         try {
-            const res = await fetch(`${API_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name,
-                    email,
-                    password,
-                    role: 'customer' 
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                setError(data.message || 'Registration failed');
-                return;
-            }
-
+            await apiFetch('/api/auth/register', 'POST', {
+                fullName: name.trim(),
+                email: email.trim().toLowerCase(),
+                password,
+                phoneNumber: null,
+            }, false);
             router.push('/(auth)/Login');
-
-        } catch (err) {
-            setError('Cannot connect to server');
+        } catch (err: any) {
+            setError(err.message || 'Registration failed');
         } finally {
             setLoading(false);
         }
@@ -79,7 +67,7 @@ export default function SignUp() {
                         <TextInput
                             placeholder='Name'
                             placeholderTextColor={colors.textSecondary}
-                            style={[styles.searchInput, { color: colors.background }]}
+                            style={[styles.searchInput, { color: colors.textSecondary }]}
                             value={name}
                             onChangeText={setName}
                         />
@@ -92,6 +80,9 @@ export default function SignUp() {
                             style={[styles.searchInput, { color: colors.textSecondary }]}
                             value={email}
                             onChangeText={setEmail}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="email-address"
                         />
                     </View >
                     <ThemedText>Password</ThemedText>
@@ -99,7 +90,7 @@ export default function SignUp() {
                         <TextInput
                             placeholder='Password'
                             placeholderTextColor={colors.textSecondary}
-                            style={[styles.searchInput, { color: colors.background }]}
+                            style={[styles.searchInput, { color: colors.textSecondary }]}
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry={true}
@@ -110,7 +101,7 @@ export default function SignUp() {
                         <TextInput
                             placeholder='Re-Type Password'
                             placeholderTextColor={colors.textSecondary}
-                            style={[styles.searchInput, { color: colors.background }]}
+                            style={[styles.searchInput, { color: colors.textSecondary }]}
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             secureTextEntry={true}
@@ -118,7 +109,7 @@ export default function SignUp() {
                     </View>
                     <View style={styles.signUpButton}>
                         <Button
-                            label='Sign Up'
+                            label={loading ? 'Signing Up...' : 'Sign Up'}
                             variant='secondary'
                             onPress={handleSignUp}
                             size='large'
@@ -127,6 +118,9 @@ export default function SignUp() {
                         />
                     </View>
                 </View>
+                {error ? (
+                    <ThemedText style={styles.errorText}>{error}</ThemedText>
+                ) : null}
                 <View style={styles.orText}>
                     <ThemedText onPress={() => router.push('/(auth)/Login')}>
                         Already have an Account? <ThemedText style={{fontWeight: 'bold'}}>Log In</ThemedText>
@@ -173,7 +167,12 @@ const styles = StyleSheet.create({
   orText: {
     alignItems: 'center',
     paddingBottom: 20,
-},
+  },
+  errorText: {
+    color: 'red',
+    paddingHorizontal: 30,
+    paddingBottom: 12,
+  },
   altLogin: {
     alignItems: 'center',
     flexDirection: 'row',

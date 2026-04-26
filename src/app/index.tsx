@@ -13,10 +13,10 @@ export default function Index() {
     );
   }
 
-  if (!user) return <Redirect href="/(guest)/Home" />;
+  if (!user) return <Redirect href="/(auth)/Continue" />;
 
   switch (user.role) {
-    case 'admin':  return <Redirect href="/(admin)/Home" />; //Delete Hom.tsx later maybe
+    case 'admin':  return <Redirect href="/(admin)/Dashboard" />;
     // case 'Rider':  return <Redirect href="/(rider)/Home" />;
     case 'customer':   return <Redirect href="/(user)/Home" />;
     default:       return <Redirect href="/(guest)/Home" />;
