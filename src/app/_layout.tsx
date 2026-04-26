@@ -4,6 +4,7 @@ import { useColorScheme, ActivityIndicator, View } from 'react-native';
 import { Slot, Redirect } from 'expo-router';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { useAuth } from '@/hooks/use-auth';
+import { CartProvider } from '@/hooks/use-cart';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -19,8 +20,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Slot />
+      <CartProvider>
+        <AnimatedSplashOverlay />
+        <Slot />
+      </CartProvider>
     </ThemeProvider>
   );
 }

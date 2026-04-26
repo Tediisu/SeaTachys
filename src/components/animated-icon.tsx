@@ -1,132 +1,135 @@
-import { Image } from 'expo-image';
-import { useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
-import Animated, { Easing, Keyframe } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
-
-const INITIAL_SCALE_FACTOR = Dimensions.get('screen').height / 90;
-const DURATION = 600;
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, StyleSheet, View } from 'react-native';
 
 export function AnimatedSplashOverlay() {
   const [visible, setVisible] = useState(true);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(0.88)).current;
+  const logoScale = useRef(new Animated.Value(0.78)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const intro = Animated.parallel([
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 650,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoScale, {
+        toValue: 1,
+        duration: 650,
+        easing: Easing.out(Easing.back(1.1)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(logoOpacity, {
+        toValue: 1,
+        duration: 420,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const outro = Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 420,
+        delay: 850,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1.06,
+        duration: 420,
+        delay: 850,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
+
+    Animated.sequence([intro, outro]).start(() => setVisible(false));
+  }, [logoOpacity, logoScale, opacity, scale]);
 
   if (!visible) return null;
 
-  const splashKeyframe = new Keyframe({
-    0: {
-      transform: [{ scale: INITIAL_SCALE_FACTOR }],
-      opacity: 1,
-    },
-    20: {
-      opacity: 1,
-    },
-    70: {
-      opacity: 0,
-      easing: Easing.elastic(0.7),
-    },
-    100: {
-      opacity: 0,
-      transform: [{ scale: 1 }],
-      easing: Easing.elastic(0.7),
-    },
-  });
-
   return (
-    <Animated.View
-      entering={splashKeyframe.duration(DURATION).withCallback((finished) => {
-        'worklet';
-        if (finished) {
-          scheduleOnRN(setVisible, false);
-        }
-      })}
-      style={styles.backgroundSolidColor}
-    />
+    <Animated.View style={[styles.overlay, { opacity }]}>
+      <View style={styles.glowLarge} />
+      <View style={styles.glowSmall} />
+      <Animated.View style={[styles.logoShell, { transform: [{ scale }] }]}>
+        <Animated.View
+          style={[
+            styles.logoBadge,
+            { opacity: logoOpacity, transform: [{ scale: logoScale }] },
+          ]}
+        >
+          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+        </Animated.View>
+      </Animated.View>
+    </Animated.View>
   );
 }
-
-const keyframe = new Keyframe({
-  0: {
-    transform: [{ scale: INITIAL_SCALE_FACTOR }],
-  },
-  100: {
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
-const logoKeyframe = new Keyframe({
-  0: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-  },
-  40: {
-    transform: [{ scale: 1.3 }],
-    opacity: 0,
-    easing: Easing.elastic(0.7),
-  },
-  100: {
-    opacity: 1,
-    transform: [{ scale: 1 }],
-    easing: Easing.elastic(0.7),
-  },
-});
-
-const glowKeyframe = new Keyframe({
-  0: {
-    transform: [{ rotateZ: '0deg' }],
-  },
-  100: {
-    transform: [{ rotateZ: '7200deg' }],
-  },
-});
 
 export function AnimatedIcon() {
   return (
     <View style={styles.iconContainer}>
-      <Animated.View entering={glowKeyframe.duration(60 * 1000 * 4)} style={styles.glow}>
-        <Image style={styles.glow} source={require('@/assets/images/logo-glow.png')} />
-      </Animated.View>
-
-      <Animated.View entering={keyframe.duration(DURATION)} style={styles.background} />
-      <Animated.View style={styles.imageContainer} entering={logoKeyframe.duration(DURATION)}>
-        <Image style={styles.image} source={require('@/assets/images/expo-logo.png')} />
-      </Animated.View>
+      <View style={styles.logoBadge}>
+        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  imageContainer: {
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1000,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#002347',
   },
-  glow: {
-    width: 201,
-    height: 201,
+  glowLarge: {
     position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    top: '22%',
+    right: -50,
+  },
+  glowSmall: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,142,0,0.12)',
+    bottom: '18%',
+    left: -40,
+  },
+  logoShell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoBadge: {
+    width: 120,
+    height: 120,
+    borderRadius: 36,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  logo: {
+    width: 88,
+    height: 88,
+    resizeMode: 'contain',
   },
   iconContainer: {
-    justifyContent: 'center',
     alignItems: 'center',
-    width: 128,
-    height: 128,
-    zIndex: 100,
-  },
-  image: {
-    position: 'absolute',
-    width: 76,
-    height: 71,
-  },
-  background: {
-    borderRadius: 40,
-    experimental_backgroundImage: `linear-gradient(180deg, #3C9FFE, #0274DF)`,
-    width: 128,
-    height: 128,
-    position: 'absolute',
-  },
-  backgroundSolidColor: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#208AEF',
-    zIndex: 1000,
+    justifyContent: 'center',
   },
 });
