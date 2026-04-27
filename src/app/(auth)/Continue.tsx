@@ -52,7 +52,7 @@ export default function Continue() {
           >
             <View style={styles.brandWrap}>
               <View style={[styles.logoBadge, { width: ui.logoSize, height: ui.logoSize, borderRadius: ui.logoSize / 3 }]}>
-                <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+                <Image source={require('@/assets/shrimpis_1.png')} style={styles.logo} />
               </View>
               <ThemedText
                 style={[
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoBadge: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#ffffff00',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -177,8 +177,8 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   logo: {
-    width: '72%',
-    height: '72%',
+    width: '200%',
+    height: '200%',
     resizeMode: 'contain',
   },
   heroTitle: {

@@ -63,7 +63,7 @@ export function AnimatedSplashOverlay() {
             { opacity: logoOpacity, transform: [{ scale: logoScale }] },
           ]}
         >
-          <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+          <Image source={require('@/assets/shrimpis_1.png')} style={styles.logo} />
         </Animated.View>
       </Animated.View>
     </Animated.View>
@@ -74,7 +74,7 @@ export function AnimatedIcon() {
   return (
     <View style={styles.iconContainer}>
       <View style={styles.logoBadge}>
-        <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
+        <Image source={require('@/assets/shrimpis_1.png')} style={styles.logo} />
       </View>
     </View>
   );
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 36,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#00234700',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   logo: {
-    width: 88,
-    height: 88,
+    width: 300,
+    height: 300,
     resizeMode: 'contain',
   },
   iconContainer: {
