@@ -25,6 +25,7 @@ import {
   type AdminMenuItem,
 } from '@/services/admin-menu.services';
 import { authService } from '@/services/auth.services';
+import { homePromoService, type HomePromoSlide } from '@/services/home-promo.services';
 import { imageUploadService } from '@/services/image-upload.services';
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -74,6 +75,17 @@ type CategoryForm = {
   isActive: boolean;
 };
 
+type HomePromoFormSlide = {
+  position: number;
+  badge: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  statLabel: string;
+  statValue: string;
+  imageUri?: string;
+};
+
 const emptyForm = (): ProductForm => ({
   name: '',
   price: 0,
@@ -92,6 +104,39 @@ const emptyCategoryForm = (): CategoryForm => ({
   isActive: true,
 });
 
+const defaultHomePromos = (): HomePromoFormSlide[] => ([
+  {
+    position: 1,
+    badge: 'Discounts',
+    eyebrow: 'TODAY',
+    title: 'Fresh seafood deals',
+    subtitle: 'Hot picks at lighter prices.',
+    statLabel: 'Savings',
+    statValue: 'Up to 20%',
+    imageUri: undefined,
+  },
+  {
+    position: 2,
+    badge: 'Limited',
+    eyebrow: 'SMALL BATCH',
+    title: 'Fresh picks',
+    subtitle: 'Small-batch menu for today.',
+    statLabel: 'Starts at',
+    statValue: 'P199',
+    imageUri: undefined,
+  },
+  {
+    position: 3,
+    badge: 'Featured',
+    eyebrow: 'CHEF PICK',
+    title: 'Chef favorites',
+    subtitle: 'Popular picks ready to order.',
+    statLabel: 'Featured',
+    statValue: '1 live',
+    imageUri: undefined,
+  },
+]);
+
 function mapMenuItem(item: AdminMenuItem): DashboardProduct {
   return {
     id: item.id,
@@ -104,6 +149,19 @@ function mapMenuItem(item: AdminMenuItem): DashboardProduct {
     isAvailable: item.isAvailable,
     isFeatured: item.isFeatured,
     displayOrder: item.displayOrder,
+  };
+}
+
+function mapHomePromoSlide(slide: HomePromoSlide): HomePromoFormSlide {
+  return {
+    position: slide.position,
+    badge: slide.badge,
+    eyebrow: slide.eyebrow,
+    title: slide.title,
+    subtitle: slide.subtitle,
+    statLabel: slide.statLabel,
+    statValue: slide.statValue,
+    imageUri: slide.imageUrl ?? undefined,
   };
 }
 
@@ -121,6 +179,173 @@ function CategoryPill({ cat, selected, onPress }: { cat: string; selected: boole
     <Pressable onPress={onPress} style={[styles.pill, selected && styles.pillSelected]}>
       <Text style={[styles.pillText, selected && styles.pillTextSelected]}>{cat}</Text>
     </Pressable>
+  );
+}
+
+function HomePromoModal({
+  visible,
+  onClose,
+  onSave,
+  initialSlides,
+  saving,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (slides: HomePromoFormSlide[]) => Promise<void>;
+  initialSlides: HomePromoFormSlide[];
+  saving: boolean;
+}) {
+  const [slides, setSlides] = useState<HomePromoFormSlide[]>(defaultHomePromos());
+
+  useEffect(() => {
+    if (visible) {
+      setSlides(initialSlides.length > 0 ? initialSlides : defaultHomePromos());
+    }
+  }, [initialSlides, visible]);
+
+  const updateSlide = (position: number, patch: Partial<HomePromoFormSlide>) => {
+    setSlides((current) =>
+      current.map((slide) => (slide.position === position ? { ...slide, ...patch } : slide))
+    );
+  };
+
+  const pickImage = async (position: number) => {
+    const ImagePicker = await import('expo-image-picker');
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow photo library access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      updateSlide(position, { imageUri: result.assets[0].uri });
+    }
+  };
+
+  const handleSave = async () => {
+    if (slides.some((slide) => !slide.badge.trim() || !slide.title.trim() || !slide.statLabel.trim() || !slide.statValue.trim())) {
+      Alert.alert('Missing fields', 'Each slide needs a badge, title, stat label, and stat value.');
+      return;
+    }
+
+    try {
+      await onSave(slides);
+      onClose();
+    } catch (err: any) {
+      Alert.alert('Unable to save promos', err.message || 'Please try again.');
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.modalSafe}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Home Slider</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={24} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {slides.map((slide) => (
+              <View key={slide.position} style={styles.promoEditorCard}>
+                <View style={styles.promoEditorHeader}>
+                  <Text style={styles.promoEditorTitle}>Slide {slide.position}</Text>
+                  <Text style={styles.promoEditorHint}>Shown on the customer home slider</Text>
+                </View>
+
+                <TouchableOpacity onPress={() => pickImage(slide.position)} style={styles.promoEditorImagePicker}>
+                  {slide.imageUri ? (
+                    <Image source={{ uri: slide.imageUri }} style={styles.promoEditorImagePreview} />
+                  ) : (
+                    <View style={styles.promoEditorImageEmpty}>
+                      <Ionicons name="image-outline" size={24} color={TEXT_SECONDARY} />
+                      <Text style={styles.imagePickerText}>Tap to add slide image</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={styles.fieldLabel}>Badge</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Discounts"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  value={slide.badge}
+                  onChangeText={(value) => updateSlide(slide.position, { badge: value })}
+                />
+
+                <Text style={styles.fieldLabel}>Eyebrow</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="TODAY"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  value={slide.eyebrow}
+                  onChangeText={(value) => updateSlide(slide.position, { eyebrow: value })}
+                />
+
+                <Text style={styles.fieldLabel}>Title</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Fresh seafood deals"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  value={slide.title}
+                  onChangeText={(value) => updateSlide(slide.position, { title: value })}
+                />
+
+                <Text style={styles.fieldLabel}>Subtitle</Text>
+                <TextInput
+                  style={[styles.input, styles.inputMultiline]}
+                  placeholder="Short supporting copy"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  multiline
+                  numberOfLines={3}
+                  value={slide.subtitle}
+                  onChangeText={(value) => updateSlide(slide.position, { subtitle: value })}
+                />
+
+                <View style={styles.promoEditorStatRow}>
+                  <View style={styles.promoEditorStatField}>
+                    <Text style={styles.fieldLabel}>Stat Label</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Savings"
+                      placeholderTextColor={TEXT_SECONDARY}
+                      value={slide.statLabel}
+                      onChangeText={(value) => updateSlide(slide.position, { statLabel: value })}
+                    />
+                  </View>
+                  <View style={styles.promoEditorStatField}>
+                    <Text style={styles.fieldLabel}>Stat Value</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Up to 20%"
+                      placeholderTextColor={TEXT_SECONDARY}
+                      value={slide.statValue}
+                      onChangeText={(value) => updateSlide(slide.position, { statValue: value })}
+                    />
+                  </View>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Slider</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }
 
@@ -536,7 +761,9 @@ export default function Dashboard() {
   const [filterCat, setFilterCat] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [promoModalVisible, setPromoModalVisible] = useState(false);
   const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null);
+  const [homePromos, setHomePromos] = useState<HomePromoFormSlide[]>(defaultHomePromos());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -550,6 +777,13 @@ export default function Dashboard() {
 
       setCategories(categoryData);
       setProducts(itemData.map(mapMenuItem));
+
+      try {
+        const promoData = await homePromoService.getAdminPromos();
+        setHomePromos(promoData.length > 0 ? promoData.map(mapHomePromoSlide) : defaultHomePromos());
+      } catch {
+        setHomePromos(defaultHomePromos());
+      }
     } catch (err: any) {
       Alert.alert('Unable to load dashboard', err.message || 'Please try again.');
     } finally {
@@ -690,6 +924,31 @@ export default function Dashboard() {
     }
   };
 
+  const handleSavePromos = async (slides: HomePromoFormSlide[]) => {
+    setSaving(true);
+    try {
+      const payload = await Promise.all(
+        slides.map(async (slide) => ({
+          position: slide.position,
+          badge: slide.badge.trim(),
+          eyebrow: slide.eyebrow.trim(),
+          title: slide.title.trim(),
+          subtitle: slide.subtitle.trim(),
+          statLabel: slide.statLabel.trim(),
+          statValue: slide.statValue.trim(),
+          imageUrl: slide.imageUri
+            ? await imageUploadService.uploadToCloudinary(slide.imageUri, 'promo')
+            : null,
+        }))
+      );
+
+      const updated = await homePromoService.updatePromos(payload);
+      setHomePromos(updated.map(mapHomePromoSlide));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -721,6 +980,38 @@ export default function Dashboard() {
               <StatCard label="Total Items" value={totalItems} color={TEAL} />
               <StatCard label="Available" value={available} color={TEAL_MID} />
               <StatCard label="Featured" value={featured} color={CORAL} />
+            </View>
+
+            <View style={styles.listSection}>
+              <View style={styles.categoryHeaderRow}>
+                <Text style={styles.sectionTitle}>Home Slider</Text>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={() => setPromoModalVisible(true)}
+                >
+                  <Ionicons name="sparkles-outline" size={16} color="#fff" />
+                  <Text style={styles.smallActionBtnText}>Manage Slider</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.promoSummaryCard}>
+                {homePromos.map((slide) => (
+                  <View key={slide.position} style={styles.promoSummaryRow}>
+                    <View style={styles.promoSummaryIndex}>
+                      <Text style={styles.promoSummaryIndexText}>{slide.position}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.promoSummaryBadge}>{slide.badge || `Slide ${slide.position}`}</Text>
+                      <Text style={styles.promoSummaryTitleText} numberOfLines={1}>
+                        {slide.title || 'Untitled slide'}
+                      </Text>
+                      <Text style={styles.promoSummaryMeta} numberOfLines={1}>
+                        {slide.statLabel}: {slide.statValue}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
             </View>
 
             <View style={styles.listSection}>
@@ -843,6 +1134,13 @@ export default function Dashboard() {
         initialCategory={editingCategory}
         saving={saving}
       />
+      <HomePromoModal
+        visible={promoModalVisible}
+        onClose={() => setPromoModalVisible(false)}
+        onSave={handleSavePromos}
+        initialSlides={homePromos}
+        saving={saving}
+      />
     </View>
   );
 }
@@ -922,6 +1220,49 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 22, fontWeight: '700', color: TEXT_PRIMARY },
   statLabel: { fontSize: 11, color: TEXT_SECONDARY, marginTop: 2, fontWeight: '500' },
+  promoSummaryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    padding: 14,
+    gap: 12,
+  },
+  promoSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  promoSummaryIndex: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TEAL_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoSummaryIndexText: {
+    color: TEAL,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  promoSummaryBadge: {
+    fontSize: 11,
+    color: TEAL_MID,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  promoSummaryTitleText: {
+    fontSize: 14,
+    color: TEXT_PRIMARY,
+    fontWeight: '700',
+  },
+  promoSummaryMeta: {
+    fontSize: 12,
+    color: TEXT_SECONDARY,
+    marginTop: 2,
+  },
 
   stickySection: {
     backgroundColor: GRAY_BG,
@@ -1057,6 +1398,53 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: GRAY_BORDER,
     backgroundColor: '#fff',
+  },
+  promoEditorCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    padding: 16,
+    marginBottom: 16,
+  },
+  promoEditorHeader: {
+    marginBottom: 12,
+  },
+  promoEditorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
+  },
+  promoEditorHint: {
+    fontSize: 12,
+    color: TEXT_SECONDARY,
+    marginTop: 2,
+  },
+  promoEditorImagePicker: {
+    marginBottom: 16,
+  },
+  promoEditorImageEmpty: {
+    height: 132,
+    borderRadius: 12,
+    backgroundColor: GRAY_BG,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: GRAY_BORDER,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  promoEditorImagePreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+  },
+  promoEditorStatRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  promoEditorStatField: {
+    flex: 1,
   },
   imagePicker: {
     alignSelf: 'center',

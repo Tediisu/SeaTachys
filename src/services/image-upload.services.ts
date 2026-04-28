@@ -1,6 +1,6 @@
 import { apiFetch } from './api';
 
-type UploadKind = 'product' | 'category';
+type UploadKind = 'product' | 'category' | 'promo';
 
 type CloudinarySignatureResponse = {
   cloudName: string;

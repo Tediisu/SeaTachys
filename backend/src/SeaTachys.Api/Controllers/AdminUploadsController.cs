@@ -36,6 +36,7 @@ public class AdminUploadsController : ControllerBase
         var targetFolder = req?.Kind?.Trim().ToLowerInvariant() switch
         {
             "category" => $"{baseFolder}/categories",
+            "promo" => $"{baseFolder}/promos",
             _ => $"{baseFolder}/products"
         };
 
