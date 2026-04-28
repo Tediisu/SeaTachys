@@ -17,13 +17,13 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var connString = builder.Configuration.GetConnectionString("Default");
+var connString = ResolveConnectionString(builder.Configuration);
 var jwtKey = builder.Configuration["Jwt:Key"];
 
 if (string.IsNullOrWhiteSpace(connString))
 {
     throw new InvalidOperationException(
-        "Missing ConnectionStrings__Default. Set it in the backend .env file or environment variables.");
+        "Missing ConnectionStrings__Default or DATABASE_URL. Set it in the backend .env file or environment variables.");
 }
 
 if (string.IsNullOrWhiteSpace(jwtKey))
@@ -59,12 +59,107 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("Database:ApplySchemaOnStartup"))
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Useful when pointing the app at a brand-new Supabase database.
+    await db.Database.EnsureCreatedAsync();
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+static string? ResolveConnectionString(IConfiguration configuration)
+{
+    var raw = configuration.GetConnectionString("Default");
+
+    if (string.IsNullOrWhiteSpace(raw))
+    {
+        raw = configuration["DATABASE_URL"];
+    }
+
+    if (string.IsNullOrWhiteSpace(raw))
+    {
+        return raw;
+    }
+
+    return NormalizeConnectionString(raw);
+}
+
+static string NormalizeConnectionString(string rawConnectionString)
+{
+    var trimmed = rawConnectionString.Trim().Trim('"', '\'');
+    var builder = trimmed.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+                  trimmed.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)
+        ? BuildConnectionStringFromUri(trimmed)
+        : new NpgsqlConnectionStringBuilder(trimmed);
+
+    if (builder.SslMode == SslMode.Prefer && IsRemoteHost(builder.Host))
+    {
+        builder.SslMode = SslMode.Require;
+    }
+
+    return builder.ConnectionString;
+}
+
+static NpgsqlConnectionStringBuilder BuildConnectionStringFromUri(string uriString)
+{
+    var uri = new Uri(uriString);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var builder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.IsDefaultPort ? 5432 : uri.Port,
+        Database = uri.AbsolutePath.Trim('/'),
+        Username = userInfo.Length > 0 ? Uri.UnescapeDataString(userInfo[0]) : string.Empty,
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : string.Empty
+    };
+
+    foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+    {
+        var parts = pair.Split('=', 2);
+        var key = Uri.UnescapeDataString(parts[0]).Replace("_", " ").Trim().ToLowerInvariant();
+        var value = parts.Length > 1 ? Uri.UnescapeDataString(parts[1]) : string.Empty;
+
+        switch (key)
+        {
+            case "sslmode":
+            case "ssl mode":
+                if (Enum.TryParse<SslMode>(value, true, out var sslMode))
+                {
+                    builder.SslMode = sslMode;
+                }
+                break;
+            case "trust server certificate":
+                if (bool.TryParse(value, out var trustServerCertificate))
+                {
+                    builder.TrustServerCertificate = trustServerCertificate;
+                }
+                break;
+            case "pooling":
+                if (bool.TryParse(value, out var pooling))
+                {
+                    builder.Pooling = pooling;
+                }
+                break;
+        }
+    }
+
+    return builder;
+}
+
+static bool IsRemoteHost(string? host) =>
+    !string.IsNullOrWhiteSpace(host) &&
+    !string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase) &&
+    host != "127.0.0.1" &&
+    host != "::1";
 
 static void LoadDotEnv(string path)
 {

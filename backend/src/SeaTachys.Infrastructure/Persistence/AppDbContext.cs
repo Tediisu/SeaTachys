@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderItemOption> OrderItemOptions => Set<OrderItemOption>();
+    public DbSet<StoreSetting> StoreSettings => Set<StoreSetting>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -172,6 +173,17 @@ public class AppDbContext : DbContext
             e.Property(x => x.ChoiceName).HasColumnName("choice_name");
             e.Property(x => x.AdditionalPrice).HasColumnName("additional_price");
             e.HasOne(x => x.OrderItem).WithMany(x => x.Options).HasForeignKey(x => x.OrderItemId);
+        });
+
+        b.Entity<StoreSetting>(e =>
+        {
+            e.ToTable("store_settings");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.Key).HasColumnName("key");
+            e.Property(x => x.Value).HasColumnName("value");
+            e.Property(x => x.Description).HasColumnName("description");
+            e.Property(x => x.UpdatedAt).HasColumnName("updated_at");
         });
     }
 }

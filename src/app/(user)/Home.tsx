@@ -1,5 +1,5 @@
-import { ActivityIndicator, StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, Image, RefreshControl, useWindowDimensions } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, Image, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -13,6 +13,7 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/use-auth';
 import { menuService, type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
+import { homePromoService, type HomePromoSlide as HomePromoSlideDto } from '@/services/home-promo.services';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/hooks/use-cart';
 
@@ -36,20 +37,34 @@ type HomeProduct = {
   displayOrder: number;
 };
 
+type PromoSlide = {
+  id: string;
+  badge: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  statLabel: string;
+  statValue: string;
+  image: ImageSourcePropType | string | null;
+};
+
 export default function Home() {
   const colors = useTheme();
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { itemCount } = useCart();
+  const sliderRef = useRef<FlatList<PromoSlide>>(null);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<HomeProduct[]>([]);
   const [categories, setCategories] = useState<MenuCategoryDto[]>([]);
+  const [promoOverrides, setPromoOverrides] = useState<PromoSlide[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   const ui = useMemo(() => {
     const isCompact = width < 390;
@@ -57,13 +72,17 @@ export default function Home() {
     const gap = isCompact ? 12 : 14;
     const contentWidth = Math.min(width - pagePadding * 2, MaxContentWidth);
     const cardWidth = (contentWidth - gap) / 2;
+    const heroPadding = isCompact ? 18 : 22;
 
     return {
       pagePadding,
       gap,
       contentWidth,
       cardWidth,
-      heroHeight: isCompact ? 220 : 244,
+      heroPadding,
+      heroHeight: isCompact ? 272 : 292,
+      promoHeight: isCompact ? 146 : 156,
+      heroSlideWidth: contentWidth - heroPadding * 2,
     };
   }, [width]);
 
@@ -75,9 +94,10 @@ export default function Home() {
     }
 
     try {
-      const [categoryData, itemData] = await Promise.all([
+      const [categoryData, itemData, promoData] = await Promise.all([
         menuService.getCategories(),
         menuService.getItems(),
+        homePromoService.getPublicPromos().catch(() => [] as HomePromoSlideDto[]),
       ]);
 
       const categoryById = new Map<string, MenuCategoryDto>(
@@ -98,6 +118,20 @@ export default function Home() {
 
       setCategories(categoryData);
       setItems(mappedItems);
+      setPromoOverrides(
+        promoData
+          .sort((a, b) => a.position - b.position)
+          .map((slide) => ({
+            id: `remote-${slide.position}`,
+            badge: slide.badge,
+            eyebrow: slide.eyebrow,
+            title: slide.title,
+            subtitle: slide.subtitle,
+            statLabel: slide.statLabel,
+            statValue: slide.statValue,
+            image: slide.imageUrl ?? null,
+          }))
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -133,6 +167,119 @@ export default function Home() {
   }, [items, search, selectedCategory]);
 
   const firstName = user?.fullname?.split(' ')[0] ?? 'Seafood Lover';
+  const featuredItems = useMemo(
+    () =>
+      [...items]
+        .filter((item) => item.isFeatured)
+        .sort((a, b) => a.displayOrder - b.displayOrder),
+    [items]
+  );
+
+  const fallbackPromoSlides = useMemo<PromoSlide[]>(() => {
+    const heroDefaults = {
+      discount: require('@/assets/images/crispy-shrimp.jpg'),
+      limited: require('@/assets/images/sisig-pusit.jpg'),
+      featured: require('@/assets/images/teryaki-salmon.jpg'),
+    } as const;
+
+    const spotlightItem = featuredItems[0] ?? items[0] ?? null;
+    const limitedItem = items.find((item) => item.category !== 'Uncategorized') ?? items[1] ?? spotlightItem;
+
+    return [
+      {
+        id: 'discounts',
+        badge: 'Discounts',
+        eyebrow: 'TODAY',
+        title: 'Fresh seafood deals',
+        subtitle: 'Hot picks at lighter prices.',
+        statLabel: 'Savings',
+        statValue: 'Up to 20%',
+        image: heroDefaults.discount,
+      },
+      {
+        id: 'limited',
+        badge: 'Limited',
+        eyebrow: limitedItem?.category?.toUpperCase() ?? 'SMALL BATCH',
+        title: limitedItem?.name ?? 'Fresh picks landed today',
+        subtitle:
+          limitedItem?.description ??
+          'Small-batch menu for today.',
+        statLabel: 'Starts at',
+        statValue: limitedItem ? `P${limitedItem.price.toFixed(0)}` : 'P199',
+        image: limitedItem?.image ?? heroDefaults.limited,
+      },
+      {
+        id: 'featured',
+        badge: `Hello, ${firstName}`,
+        eyebrow: 'FEATURED',
+        title: spotlightItem ? `Try ${spotlightItem.name}` : 'Chef favorites',
+        subtitle:
+          spotlightItem?.description ??
+          'Popular picks ready to order.',
+        statLabel: 'Featured',
+        statValue: `${Math.max(featuredItems.length, 1)} live`,
+        image: spotlightItem?.image ?? heroDefaults.featured,
+      },
+    ];
+  }, [featuredItems, firstName, items]);
+
+  const promoSlides = useMemo(
+    () => (promoOverrides.length > 0 ? promoOverrides : fallbackPromoSlides),
+    [fallbackPromoSlides, promoOverrides]
+  );
+
+  useEffect(() => {
+    setCurrentSlideIndex((prev) => Math.min(prev, Math.max(promoSlides.length - 1, 0)));
+  }, [promoSlides.length]);
+
+  useEffect(() => {
+    if (promoSlides.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => {
+        const next = (prev + 1) % promoSlides.length;
+        sliderRef.current?.scrollToOffset({ offset: next * ui.heroSlideWidth, animated: true });
+        return next;
+      });
+    }, 4200);
+
+    return () => clearInterval(interval);
+  }, [promoSlides.length, ui.heroSlideWidth]);
+
+  const handleSliderMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / ui.heroSlideWidth);
+    setCurrentSlideIndex(Math.max(0, Math.min(nextIndex, promoSlides.length - 1)));
+  };
+
+  const renderPromoSlide = ({ item }: { item: PromoSlide }) => {
+    const imageSource =
+      typeof item.image === 'string'
+        ? { uri: item.image }
+        : item.image || require('@/assets/images/icon.png');
+
+    return (
+      <View style={[styles.promoSlide, { width: ui.heroSlideWidth, height: ui.promoHeight }]}>
+        <View style={styles.promoSlideGlow} />
+        <View style={styles.promoCopy}>
+          <View style={styles.promoBadge}>
+            <ThemedText style={styles.promoBadgeText}>{item.badge}</ThemedText>
+          </View>
+          <ThemedText style={styles.promoEyebrow}>{item.eyebrow}</ThemedText>
+          <ThemedText style={styles.promoTitle}>{item.title}</ThemedText>
+          <ThemedText style={styles.promoSubtitle} numberOfLines={2}>
+            {item.subtitle}
+          </ThemedText>
+
+          <View style={styles.promoStatPill}>
+            <ThemedText style={styles.promoStatLabel}>{item.statLabel}</ThemedText>
+            <ThemedText style={styles.promoStatValue}>{item.statValue}</ThemedText>
+          </View>
+        </View>
+
+        <Image source={imageSource} style={styles.promoImage} />
+      </View>
+    );
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -210,21 +357,45 @@ export default function Home() {
                   </View>
                 </View>
 
-                <View style={[styles.heroCard, { minHeight: ui.heroHeight, backgroundColor: colors.primary }]}>
+                <View style={[styles.heroCard, { minHeight: ui.heroHeight, backgroundColor: colors.primary, padding: ui.heroPadding }]}>
                   <View style={styles.heroGlowTop} />
                   <View style={styles.heroGlowBottom} />
 
-                  <View style={styles.heroTextBlock}>
-                    <View style={styles.heroBadge}>
-                      <ThemedText style={styles.heroBadgeText}>Fresh catch today</ThemedText>
+                  <View style={styles.heroIntroRow}>
+                    <View>
+                      <ThemedText style={styles.heroKicker}>Fresh for {firstName}</ThemedText>
+                      <ThemedText style={styles.heroHeading}>Today&apos;s seafood picks</ThemedText>
                     </View>
-                    <ThemedText style={styles.heroTitle}>Hello, {firstName}</ThemedText>
-                    <ThemedText style={styles.heroSubtitle}>
-                      Craving seafood? Pick from best-sellers, crispy bites, and savory specialties.
-                    </ThemedText>
+                    <View style={styles.heroCounterPill}>
+                      <ThemedText style={styles.heroCounterValue}>{promoSlides.length}</ThemedText>
+                      <ThemedText style={styles.heroCounterLabel}>slides</ThemedText>
+                    </View>
                   </View>
 
-                  <Image source={categoryImageMap.All} style={styles.heroImage} />
+                  <FlatList
+                    ref={sliderRef}
+                    data={promoSlides}
+                    renderItem={renderPromoSlide}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    pagingEnabled
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleSliderMomentumEnd}
+                    style={styles.promoSlider}
+                  />
+
+                  <View style={styles.heroPagination}>
+                    {promoSlides.map((slide, index) => (
+                      <View
+                        key={slide.id}
+                        style={[
+                          styles.heroDot,
+                          index === currentSlideIndex ? styles.heroDotActive : null,
+                        ]}
+                      />
+                    ))}
+                  </View>
 
                   <View style={styles.searchWrap}>
                     <View style={styles.searchBar}>
@@ -354,7 +525,6 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: 30,
     overflow: 'hidden',
-    padding: 22,
     marginBottom: 22,
   },
   heroGlowTop: {
@@ -369,53 +539,161 @@ const styles = StyleSheet.create({
   heroGlowBottom: {
     position: 'absolute',
     bottom: 20,
-    right: 90,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,142,0,0.14)',
+    right: 70,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,142,0,0.18)',
   },
-  heroTextBlock: {
-    maxWidth: '62%',
+  heroIntroRow: {
     zIndex: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  heroBadge: {
-    alignSelf: 'flex-start',
+  heroKicker: {
+    color: '#9DD3FF',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  heroHeading: {
+    color: '#FFFFFF',
+    fontSize: 23,
+    lineHeight: 27,
+    fontWeight: '900',
+    maxWidth: 190,
+  },
+  heroCounterPill: {
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginBottom: 12,
+    paddingVertical: 10,
+    minWidth: 66,
+    alignItems: 'center',
   },
-  heroBadgeText: {
-    color: '#FFE4BD',
+  heroCounterValue: {
+    color: '#FFFFFF',
+    fontSize: FontSize.subtitle,
+    fontWeight: '900',
+  },
+  heroCounterLabel: {
+    color: 'rgba(255,255,255,0.74)',
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  promoSlider: {
+    marginTop: 18,
+    zIndex: 2,
+  },
+  promoSlide: {
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 18,
+  },
+  promoSlideGlow: {
+    position: 'absolute',
+    right: -10,
+    top: -8,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  promoCopy: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 12,
+    justifyContent: 'center',
+  },
+  promoBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,142,0,0.2)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  promoBadgeText: {
+    color: '#FFDCA8',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+  },
+  promoEyebrow: {
+    color: '#9DD3FF',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    marginBottom: 6,
+  },
+  promoTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 23,
+    fontWeight: '900',
+    marginBottom: 6,
+    maxWidth: 170,
+  },
+  promoSubtitle: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    lineHeight: 17,
+    maxWidth: 164,
+  },
+  promoStatPill: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  promoStatLabel: {
+    color: '#6B7280',
     fontSize: FontSize.xs,
     fontWeight: '700',
   },
-  heroTitle: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    lineHeight: 38,
+  promoStatValue: {
+    color: '#0F2F57',
+    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 8,
   },
-  heroSubtitle: {
-    color: 'rgba(255,255,255,0.82)',
-    fontSize: FontSize.small,
-    lineHeight: 22,
+  promoImage: {
+    width: 108,
+    height: 128,
+    marginRight: 10,
+    borderRadius: 20,
+    resizeMode: 'cover',
   },
-  heroImage: {
-    position: 'absolute',
-    right: 14,
-    top: 22,
-    width: 122,
-    height: 122,
-    resizeMode: 'contain',
-    opacity: 0.92,
+  heroPagination: {
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  heroDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.32)',
+  },
+  heroDotActive: {
+    width: 28,
+    backgroundColor: '#FF8E00',
   },
   searchWrap: {
     marginTop: 'auto',
-    paddingTop: 18,
+    paddingTop: 16,
     zIndex: 2,
   },
   searchBar: {
