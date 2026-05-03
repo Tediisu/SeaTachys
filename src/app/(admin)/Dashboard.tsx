@@ -351,11 +351,13 @@ function HomePromoModal({
 
 function ProductRow({
   item,
+  onEdit,
   onToggleAvailable,
   onToggleFeatured,
   onDelete,
 }: {
   item: DashboardProduct;
+  onEdit: (item: DashboardProduct) => void;
   onToggleAvailable: (item: DashboardProduct) => void;
   onToggleFeatured: (item: DashboardProduct) => void;
   onDelete: (item: DashboardProduct) => void;
@@ -406,6 +408,14 @@ function ProductRow({
       </View>
 
       <TouchableOpacity
+        onPress={() => onEdit(item)}
+        style={styles.categoryIconBtn}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="create-outline" size={18} color={TEAL} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
         onPress={() =>
           Alert.alert('Delete item', `Remove "${item.name}"?`, [
             { text: 'Cancel', style: 'cancel' },
@@ -426,24 +436,39 @@ function AddItemModal({
   onClose,
   onSave,
   categories,
+  initialProduct,
   saving,
 }: {
   visible: boolean;
   onClose: () => void;
   onSave: (product: ProductForm) => Promise<void>;
   categories: AdminCategory[];
+  initialProduct?: DashboardProduct | null;
   saving: boolean;
 }) {
   const [form, setForm] = useState<ProductForm>(emptyForm());
 
   useEffect(() => {
-    if (visible) {
-      setForm((prev) => ({
-        ...emptyForm(),
-        categoryId: categories[0]?.id ?? null,
-      }));
+    if (!visible) return;
+
+    if (initialProduct) {
+      setForm({
+        name: initialProduct.name,
+        price: initialProduct.price,
+        description: initialProduct.description,
+        imageUri: initialProduct.imageUri ?? undefined,
+        categoryId: initialProduct.categoryId ?? categories[0]?.id ?? null,
+        isAvailable: initialProduct.isAvailable,
+        isFeatured: initialProduct.isFeatured,
+      });
+      return;
     }
-  }, [categories, visible]);
+
+    setForm({
+      ...emptyForm(),
+      categoryId: categories[0]?.id ?? null,
+    });
+  }, [categories, initialProduct, visible]);
 
   const pickImage = async () => {
     const ImagePicker = await import('expo-image-picker');
@@ -491,7 +516,7 @@ function AddItemModal({
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <SafeAreaView style={styles.modalSafe}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add New Item</Text>
+            <Text style={styles.modalTitle}>{initialProduct ? 'Edit Item' : 'Add New Item'}</Text>
             <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={24} color={TEXT_PRIMARY} />
             </TouchableOpacity>
@@ -597,7 +622,7 @@ function AddItemModal({
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Add Item</Text>}
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{initialProduct ? 'Save Changes' : 'Add Item'}</Text>}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -762,6 +787,7 @@ export default function Dashboard() {
   const [modalVisible, setModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [promoModalVisible, setPromoModalVisible] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<DashboardProduct | null>(null);
   const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null);
   const [homePromos, setHomePromos] = useState<HomePromoFormSlide[]>(defaultHomePromos());
   const [loading, setLoading] = useState(true);
@@ -830,6 +856,33 @@ export default function Dashboard() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveProduct = async (data: ProductForm) => {
+    if (editingProduct) {
+      setSaving(true);
+      try {
+        const imageUrl = data.imageUri
+          ? await imageUploadService.uploadToCloudinary(data.imageUri, 'product')
+          : null;
+
+        await updateProduct(editingProduct, {
+          name: data.name.trim(),
+          price: data.price,
+          description: data.description.trim(),
+          imageUri: imageUrl ?? undefined,
+          categoryId: data.categoryId ?? null,
+          isAvailable: data.isAvailable,
+          isFeatured: data.isFeatured,
+        });
+      } finally {
+        setSaving(false);
+        setEditingProduct(null);
+      }
+      return;
+    }
+
+    await handleAdd(data);
   };
 
   const updateProduct = async (item: DashboardProduct, patch: Partial<DashboardProduct>) => {
@@ -962,7 +1015,14 @@ export default function Dashboard() {
               <Ionicons name="log-out-outline" size={18} color={TEXT_PRIMARY} />
               <Text style={styles.logoutBtnText}>Logout</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => {
+                setEditingProduct(null);
+                setModalVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
               <Ionicons name="add" size={20} color="#fff" />
               <Text style={styles.addBtnText}>Add Item</Text>
             </TouchableOpacity>
@@ -975,7 +1035,7 @@ export default function Dashboard() {
             <Text style={styles.loadingText}>Loading menu dashboard...</Text>
           </View>
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[1]}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[3]}>
             <View style={styles.statsRow}>
               <StatCard label="Total Items" value={totalItems} color={TEAL} />
               <StatCard label="Available" value={available} color={TEAL_MID} />
@@ -1106,6 +1166,10 @@ export default function Dashboard() {
                   <ProductRow
                     key={item.id}
                     item={item}
+                    onEdit={(product) => {
+                      setEditingProduct(product);
+                      setModalVisible(true);
+                    }}
                     onToggleAvailable={toggleAvailable}
                     onToggleFeatured={toggleFeatured}
                     onDelete={deleteProduct}
@@ -1119,9 +1183,13 @@ export default function Dashboard() {
 
       <AddItemModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleAdd}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingProduct(null);
+        }}
+        onSave={handleSaveProduct}
         categories={categories}
+        initialProduct={editingProduct}
         saving={saving}
       />
       <CategoryModal

@@ -77,9 +77,6 @@ export default function Continue() {
               ]}
             >
               <ThemedText style={styles.cardTitle}>Choose an account</ThemedText>
-              <ThemedText style={styles.cardCaption}>
-                Pick how you want to sign in before you start ordering.
-              </ThemedText>
 
               <Pressable style={[styles.optionButton, { minHeight: ui.optionHeight }]} onPress={() => console.log('Google login coming soon')}>
                 <View style={styles.optionIconShell}>
@@ -96,6 +93,12 @@ export default function Continue() {
                 <ThemedText style={styles.optionText}>Continue with Facebook</ThemedText>
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
               </Pressable>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <ThemedText style={styles.dividerText}>or</ThemedText>
+                <View style={styles.dividerLine} />
+              </View>
 
               <Pressable style={[styles.optionButton, { minHeight: ui.optionHeight }]} onPress={() => router.push('/(auth)/Login')}>
                 <View style={styles.emailIconShell}>
@@ -117,9 +120,9 @@ export default function Continue() {
               </View>
 
               <View style={styles.footer}>
-                <ThemedText style={styles.footerText}>Already registered? </ThemedText>
-                <Pressable onPress={() => router.push('/(auth)/Login')}>
-                  <ThemedText style={styles.linkText}>Login with Email</ThemedText>
+                <ThemedText style={styles.footerText}>Not yet signed in? </ThemedText>
+                <Pressable onPress={() => router.push('/(auth)/SignUp')}>
+                  <ThemedText style={styles.linkText}>Register here</ThemedText>
                 </Pressable>
               </View>
             </View>
@@ -203,13 +206,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '800',
-  },
-  cardCaption: {
-    marginTop: 6,
-    marginBottom: 18,
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: FontSize.body,
-    lineHeight: 22,
+    lineHeight: 34,
+    paddingTop: 2,
+    marginBottom: 16,
   },
   optionButton: {
     backgroundColor: '#FFFFFF',
@@ -246,6 +245,24 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: FontSize.body,
     fontWeight: '600',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  dividerText: {
+    color: 'rgba(255,255,255,0.66)',
+    fontSize: FontSize.small,
+    fontWeight: '600',
+    textTransform: 'lowercase',
   },
   primaryAction: {
     marginTop: 8,

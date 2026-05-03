@@ -3,12 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, FontSize, MaxContentWidth, Spacing } from '@/constants/theme';
+import { FontSize, MaxContentWidth, Spacing } from '@/constants/theme';
 import Button from '@/components/ui/Button';
 import { useTheme } from '@/hooks/use-theme';
 import ProductCard from '@/components/ui/Product-Card';
 import CategoryButton from '@/components/ui/Category-Button';
-import SideBar from '@/components/ui/Side-Bar';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/use-auth';
@@ -56,7 +55,6 @@ export default function Home() {
   const { itemCount } = useCart();
   const sliderRef = useRef<FlatList<PromoSlide>>(null);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<HomeProduct[]>([]);
@@ -80,8 +78,8 @@ export default function Home() {
       contentWidth,
       cardWidth,
       heroPadding,
-      heroHeight: isCompact ? 272 : 292,
-      promoHeight: isCompact ? 146 : 156,
+      heroHeight: isCompact ? 280 : 300,
+      promoHeight: isCompact ? 154 : 164,
       heroSlideWidth: contentWidth - heroPadding * 2,
     };
   }, [width]);
@@ -262,11 +260,11 @@ export default function Home() {
         <View style={styles.promoSlideGlow} />
         <View style={styles.promoCopy}>
           <View style={styles.promoBadge}>
-            <ThemedText style={styles.promoBadgeText}>{item.badge}</ThemedText>
+            <ThemedText style={styles.promoBadgeText} numberOfLines={1}>{item.badge}</ThemedText>
           </View>
-          <ThemedText style={styles.promoEyebrow}>{item.eyebrow}</ThemedText>
-          <ThemedText style={styles.promoTitle}>{item.title}</ThemedText>
-          <ThemedText style={styles.promoSubtitle} numberOfLines={2}>
+          <ThemedText style={styles.promoEyebrow} numberOfLines={1}>{item.eyebrow}</ThemedText>
+          <ThemedText style={styles.promoTitle} numberOfLines={2}>{item.title}</ThemedText>
+          <ThemedText style={styles.promoSubtitle} numberOfLines={1}>
             {item.subtitle}
           </ThemedText>
 
@@ -283,7 +281,7 @@ export default function Home() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         {loading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -305,7 +303,7 @@ export default function Home() {
             contentContainerStyle={{
               paddingHorizontal: ui.pagePadding,
               paddingTop: 8,
-              paddingBottom: BottomTabInset + Spacing.four,
+              paddingBottom: 20,
             }}
             renderItem={({ item }) => (
               <View style={{ width: ui.cardWidth }}>
@@ -327,33 +325,28 @@ export default function Home() {
             ListHeaderComponent={
               <View style={[styles.pageContent, { width: ui.contentWidth, alignSelf: 'center' }]}>
                 <View style={styles.headerRow}>
-                  <Button
-                    variant="primary"
-                    onPress={() => setIsSidebarOpen(true)}
-                    icon={<FontAwesome6 name="bars" size={20} color="white" />}
-                    size="boxSmall"
-                    radius={50}
-                    style={{ paddingHorizontal: 0 }}
-                  />
-
-                  <View style={styles.locationCard}>
-                    <ThemedText style={styles.locationLabel}>DELIVER TO</ThemedText>
-                    <ThemedText style={styles.locationValue}>Rawr Bldg</ThemedText>
-                  </View>
-
-                  <View>
-                    <Button
-                      onPress={() => router.push('/(user)/Cart')}
-                      icon={<Ionicons name="bag-sharp" size={20} color="white" />}
-                      size="boxSmall"
-                      radius={50}
-                      style={{ paddingHorizontal: 0 }}
-                    />
-                    {itemCount > 0 ? (
-                      <View style={styles.cartBadge}>
-                        <ThemedText style={styles.cartBadgeText}>{itemCount}</ThemedText>
+                  <View style={[styles.locationCard, styles.locationCardFull]}>
+                    <View style={styles.locationTopRow}>
+                      <View style={styles.locationIconWrap}>
+                        <Ionicons name="location" size={18} color="#FFFFFF" />
                       </View>
-                    ) : null}
+                      <View style={styles.locationTextWrap}>
+                        <ThemedText style={styles.locationLabel}>DELIVERY ADDRESS</ThemedText>
+                        <ThemedText style={styles.locationValue}>Rawr Bldg</ThemedText>
+                        <ThemedText style={styles.locationHint}>Delivered near your campus stop.</ThemedText>
+                      </View>
+                      <View style={styles.locationStatusPill}>
+                        <ThemedText style={styles.locationStatusText}>Live</ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.locationMetaRow}>
+                      {itemCount > 0 ? (
+                        <View style={styles.inlineCartPill}>
+                          <Ionicons name="bag-handle-outline" size={12} color="#0F2F57" />
+                          <ThemedText style={styles.inlineCartText}>{itemCount} in cart</ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 </View>
 
@@ -447,7 +440,6 @@ export default function Home() {
           />
         )}
 
-        <SideBar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       </SafeAreaView>
     </ThemedView>
   );
@@ -500,26 +492,96 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   locationCard: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(15,47,87,0.06)',
     shadowColor: '#00172F',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 4,
   },
+  locationCardFull: {
+    flex: 1,
+  },
+  locationTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  locationIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#0F2F57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F2F57',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  locationTextWrap: {
+    flex: 1,
+  },
   locationLabel: {
-    color: '#6B7280',
+    color: '#7B8797',
     fontSize: FontSize.xs,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.1,
   },
   locationValue: {
     color: '#111827',
-    fontSize: FontSize.subtitle,
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '900',
+    marginTop: 1,
+  },
+  locationHint: {
+    color: '#6B7280',
+    fontSize: FontSize.xs,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  locationStatusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E9F7EF',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  locationStatusText: {
+    color: '#0F6E56',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  locationMetaRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+  },
+  inlineCartPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EEF3F8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  inlineCartText: {
+    color: '#0F2F57',
+    fontSize: FontSize.xs,
     fontWeight: '800',
   },
   heroCard: {
@@ -638,16 +700,19 @@ const styles = StyleSheet.create({
   promoTitle: {
     color: '#FFFFFF',
     fontSize: 20,
-    lineHeight: 23,
+    lineHeight: 26,
     fontWeight: '900',
     marginBottom: 6,
-    maxWidth: 170,
+    maxWidth: 168,
+    paddingTop: 2,
+    flexShrink: 1,
   },
   promoSubtitle: {
     color: 'rgba(255,255,255,0.82)',
     fontSize: 12,
-    lineHeight: 17,
-    maxWidth: 164,
+    lineHeight: 18,
+    maxWidth: 152,
+    flexShrink: 1,
   },
   promoStatPill: {
     alignSelf: 'flex-start',
@@ -668,9 +733,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   promoImage: {
-    width: 108,
-    height: 128,
-    marginRight: 10,
+    width: 128,
+    height: 136,
+    marginRight: 8,
     borderRadius: 20,
     resizeMode: 'cover',
   },
@@ -744,23 +809,6 @@ const styles = StyleSheet.create({
   },
   counterText: {
     color: '#0F2F57',
-    fontSize: FontSize.xs,
-    fontWeight: '800',
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#FF8E00',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-  },
-  cartBadgeText: {
-    color: '#FFFFFF',
     fontSize: FontSize.xs,
     fontWeight: '800',
   },
