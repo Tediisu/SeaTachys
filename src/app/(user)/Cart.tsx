@@ -14,17 +14,9 @@ export default function CartScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.headerRow}>
-            <Button
-              variant="secondary"
-              icon={<Ionicons name="chevron-back-outline" size={22} color="white" />}
-              onPress={() => router.back()}
-              size="boxSmall"
-              radius={50}
-              style={{ paddingHorizontal: 0 }}
-            />
             <ThemedText style={styles.title}>Your Cart</ThemedText>
           </View>
 
