@@ -1,13 +1,15 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import ProductCard from '@/components/ui/Product-Card';
 import { FontSize } from '@/constants/theme';
-import { menuService, type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
+import { type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
+import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
+import { SearchScreenSkeleton } from '@/components/ui/SkeletonScreens';
 
 type SearchProduct = {
   id: string;
@@ -22,39 +24,25 @@ type SearchProduct = {
 export default function SearchScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [items, setItems] = useState<SearchProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { publicData, publicLoading } = useAppBootstrap();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [categoryData, itemData] = await Promise.all([
-          menuService.getCategories(),
-          menuService.getItems(),
-        ]);
+  const items = useMemo<SearchProduct[]>(() => {
+    const categoryById = new Map<string, MenuCategoryDto>(
+      publicData.categories.map((category: MenuCategoryDto) => [category.id, category])
+    );
 
-        const categoryById = new Map<string, MenuCategoryDto>(
-          categoryData.map((category: MenuCategoryDto) => [category.id, category])
-        );
+    return publicData.items.map((item: MenuItemDto) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      description: item.description,
+      image: item.imageUrl || null,
+      category: item.categoryId ? categoryById.get(item.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
+      rating: 4.5,
+    }));
+  }, [publicData.categories, publicData.items]);
 
-        setItems(
-          itemData.map((item: MenuItemDto) => ({
-            id: item.id,
-            name: item.name,
-            price: Number(item.price),
-            description: item.description,
-            image: item.imageUrl || null,
-            category: item.categoryId ? categoryById.get(item.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
-            rating: 4.5,
-          }))
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, []);
+  const loading = publicLoading && items.length === 0;
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -93,9 +81,7 @@ export default function SearchScreen() {
           </View>
 
           {loading ? (
-            <View style={styles.loadingState}>
-              <ActivityIndicator size="large" color="#0F2F57" />
-            </View>
+            <SearchScreenSkeleton />
           ) : filtered.length === 0 ? (
             <View style={styles.emptyState}>
               <ThemedText style={styles.emptyTitle}>No matches found</ThemedText>
@@ -159,11 +145,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: FontSize.body,
     fontWeight: '500',
-  },
-  loadingState: {
-    paddingVertical: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyState: {
     backgroundColor: '#FFFFFF',

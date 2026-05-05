@@ -8,7 +8,6 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FontSize } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { authService } from '@/services/auth.services';
 
 function AccountRow({
   icon,
@@ -35,11 +34,11 @@ function AccountRow({
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = async () => {
-    await authService.logout();
-    router.replace('/');
+    await logout();
+    router.replace('/(auth)/Continue');
   };
 
   return (

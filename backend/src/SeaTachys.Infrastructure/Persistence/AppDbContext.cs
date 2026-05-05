@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderItemOption> OrderItemOptions => Set<OrderItemOption>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<StoreSetting> StoreSettings => Set<StoreSetting>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -173,6 +174,19 @@ public class AppDbContext : DbContext
             e.Property(x => x.ChoiceName).HasColumnName("choice_name");
             e.Property(x => x.AdditionalPrice).HasColumnName("additional_price");
             e.HasOne(x => x.OrderItem).WithMany(x => x.Options).HasForeignKey(x => x.OrderItemId);
+        });
+
+        b.Entity<RefreshToken>(e =>
+        {
+            e.ToTable("refresh_tokens");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasColumnName("id");
+            e.Property(x => x.UserId).HasColumnName("user_id");
+            e.Property(x => x.Token).HasColumnName("token");
+            e.Property(x => x.ExpiresAt).HasColumnName("expires_at");
+            e.Property(x => x.RevokedAt).HasColumnName("revoked_at");
+            e.Property(x => x.CreatedAt).HasColumnName("created_at");
+            e.HasOne(x => x.User).WithMany(x => x.RefreshTokens).HasForeignKey(x => x.UserId);
         });
 
         b.Entity<StoreSetting>(e =>

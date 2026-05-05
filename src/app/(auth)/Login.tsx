@@ -7,13 +7,14 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { authService } from '@/services/auth.services';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { goBack } from 'expo-router/build/global-state/routing';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function Login() {
   const colors = useTheme();
   const router = useRouter();
+  const { login } = useAuth();
   const { width, height } = useWindowDimensions();
 
   const [email, setEmail] = useState('');
@@ -41,9 +42,9 @@ export default function Login() {
     setError('');
 
     try {
-      await authService.login(email.trim(), password);
-      console.log('✓ Login: token saved, navigating...');
-      router.push('/');
+      await login(email.trim(), password);
+      console.log('✓ Login: session ready, navigating...');
+      router.replace('/');
     } catch (err: any) {
       console.log('✗ Login failed:', err.message);
       setError(err.message || 'Login failed');

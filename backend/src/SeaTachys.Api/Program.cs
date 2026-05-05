@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
 using Npgsql.NameTranslation;
 using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 LoadDotEnv(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
 
@@ -56,7 +59,41 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy("public-read", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 var app = builder.Build();
 
@@ -69,12 +106,54 @@ if (builder.Configuration.GetValue<bool>("Database:ApplySchemaOnStartup"))
     await db.Database.EnsureCreatedAsync();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+await EnsureSecuritySchemaAsync(app.Services);
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
+static async Task EnsureSecuritySchemaAsync(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await db.Database.ExecuteSqlRawAsync(
+        """
+        CREATE TABLE IF NOT EXISTS public.refresh_tokens (
+            id uuid PRIMARY KEY,
+            user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+            token text NOT NULL,
+            expires_at timestamp with time zone NOT NULL,
+            revoked_at timestamp with time zone NULL,
+            created_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+        """);
+
+    await db.Database.ExecuteSqlRawAsync(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_refresh_tokens_token
+        ON public.refresh_tokens (token);
+        """);
+
+    await db.Database.ExecuteSqlRawAsync(
+        """
+        CREATE INDEX IF NOT EXISTS ix_refresh_tokens_user_id
+        ON public.refresh_tokens (user_id);
+        """);
+}
 
 static string? ResolveConnectionString(IConfiguration configuration)
 {

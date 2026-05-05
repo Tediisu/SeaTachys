@@ -1,8 +1,12 @@
-import { View, Image, StyleSheet, Pressable, ImageSourcePropType } from 'react-native';
+import { View, StyleSheet, Pressable, ImageSourcePropType } from 'react-native';
+import { useState } from 'react';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { optimizeImageUrl } from '@/utils/image';
+import Skeleton from './Skeleton';
 
 type ProductCardItem = {
   id: string;
@@ -22,15 +26,29 @@ interface ProductCardProps {
 
 export default function ProductCard({ item, onPress, compact = false }: ProductCardProps) {
   const colors = useTheme();
+  const [imageReady, setImageReady] = useState(typeof item.image !== 'string');
 
   const imageSource =
     typeof item.image === 'string'
-      ? { uri: item.image }
+      ? optimizeImageUrl(item.image, { width: compact ? 360 : 520, height: compact ? 300 : 420, fit: 'cover' }) ?? item.image
       : item.image || require('@/assets/images/icon.png');
 
   return (
     <Pressable onPress={onPress} style={[styles.card, { backgroundColor: '#FFFFFF' }]}>
-      <Image source={imageSource} style={[styles.image, compact && styles.imageCompact]} />
+      <View style={styles.imageWrap}>
+        <Image
+          source={imageSource}
+          style={[styles.image, compact && styles.imageCompact]}
+          contentFit="cover"
+          transition={120}
+          cachePolicy="memory-disk"
+          onLoadStart={() => setImageReady(false)}
+          onLoadEnd={() => setImageReady(true)}
+        />
+        {!imageReady ? (
+          <Skeleton style={[StyleSheet.absoluteFillObject, compact ? styles.imageCompact : styles.image]} radius={0} />
+        ) : null}
+      </View>
 
       <View style={styles.info}>
         <View style={styles.topMeta}>
@@ -77,6 +95,9 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 184,
+  },
+  imageWrap: {
+    position: 'relative',
   },
   imageCompact: {
     height: 136,

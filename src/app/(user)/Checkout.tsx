@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button';
 import { useCart } from '@/hooks/use-cart';
 import { FontSize } from '@/constants/theme';
 import { ordersService, type OrderQuoteResponse } from '@/services/orders.services';
+import { QuoteSummarySkeleton } from '@/components/ui/SkeletonScreens';
 
 const paymentMethods = [
   { id: 'gcash', label: 'GCash' },
@@ -178,7 +179,7 @@ export default function CheckoutScreen() {
           <View style={styles.card}>
             <ThemedText style={styles.sectionTitle}>Order Summary</ThemedText>
             {loadingQuote ? (
-              <ActivityIndicator color="#0F2F57" />
+              <QuoteSummarySkeleton />
             ) : (
               <>
                 <View style={styles.summaryRow}>

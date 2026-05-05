@@ -1,4 +1,5 @@
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,11 +11,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { menuService, type MenuItemDetailDto, type MenuItemOptionChoiceDto } from '@/services/menu.services';
 import { useCart } from '@/hooks/use-cart';
 import { FontSize, Spacing } from '@/constants/theme';
+import { optimizeImageUrl } from '@/utils/image';
+import Skeleton from '@/components/ui/Skeleton';
+import { ProductDetailSkeleton } from '@/components/ui/SkeletonScreens';
 
 export default function ProductDetailScreen() {
   const colors = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const requestedId = String(id ?? '');
   const { addItem } = useCart();
 
   const [item, setItem] = useState<MenuItemDetailDto | null>(null);
@@ -23,11 +28,26 @@ export default function ProductDetailScreen() {
   const [notes, setNotes] = useState('');
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
   const [error, setError] = useState('');
+  const [imageReady, setImageReady] = useState(false);
 
   useEffect(() => {
+    if (!requestedId) {
+      setItem(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setItem(null);
+    setError('');
+    setImageReady(false);
+    setSelectedOptions({});
+    setQuantity(1);
+    setNotes('');
+
     const loadItem = async () => {
       try {
-        const data = await menuService.getItem(String(id));
+        const data = await menuService.getItem(requestedId);
         setItem(data);
       } catch (err: any) {
         setError(err.message || 'Unable to load product');
@@ -36,10 +56,8 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (id) {
-      loadItem();
-    }
-  }, [id]);
+    loadItem();
+  }, [requestedId]);
 
   const toggleChoice = (groupId: string, choiceId: string, maxSelections: number) => {
     setSelectedOptions((current) => {
@@ -118,10 +136,14 @@ export default function ProductDetailScreen() {
     router.push('/(user)/Cart');
   };
 
-  if (loading) {
+  const isResolvingCurrentItem = loading || !item || item.id !== requestedId;
+
+  if (isResolvingCurrentItem) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea}>
+          <ProductDetailSkeleton />
+        </SafeAreaView>
       </ThemedView>
     );
   }
@@ -134,7 +156,9 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const imageSource = item.imageUrl ? { uri: item.imageUrl } : require('@/assets/images/icon.png');
+  const imageSource = item.imageUrl
+    ? optimizeImageUrl(item.imageUrl, { width: 900, height: 640, fit: 'cover' }) ?? item.imageUrl
+    : require('@/assets/images/icon.png');
 
   return (
     <ThemedView style={styles.container}>
@@ -151,7 +175,18 @@ export default function ProductDetailScreen() {
             />
           </View>
 
-          <Image source={imageSource} style={styles.heroImage} />
+          <View style={styles.heroImageWrap}>
+            <Image
+              source={imageSource}
+              style={styles.heroImage}
+              contentFit="cover"
+              transition={140}
+              cachePolicy="memory-disk"
+              onLoadStart={() => setImageReady(false)}
+              onLoadEnd={() => setImageReady(true)}
+            />
+            {!imageReady ? <Skeleton style={styles.heroImage} radius={26} /> : null}
+          </View>
 
           <View style={styles.card}>
             <ThemedText style={styles.name}>{item.name}</ThemedText>
@@ -263,6 +298,9 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     marginBottom: 18,
     backgroundColor: '#FFFFFF',
+  },
+  heroImageWrap: {
+    position: 'relative',
   },
   card: {
     backgroundColor: '#FFFFFF',

@@ -1,7 +1,6 @@
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -24,9 +24,11 @@ import {
   type AdminCategory,
   type AdminMenuItem,
 } from '@/services/admin-menu.services';
-import { authService } from '@/services/auth.services';
 import { homePromoService, type HomePromoSlide } from '@/services/home-promo.services';
 import { imageUploadService } from '@/services/image-upload.services';
+import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
+import { useAuth } from '@/hooks/use-auth';
+import { DashboardSkeleton } from '@/components/ui/SkeletonScreens';
 
 const CATEGORY_EMOJI: Record<string, string> = {
   Fish: '🐟',
@@ -780,6 +782,8 @@ function CategoryModal({
 
 export default function Dashboard() {
   const router = useRouter();
+  const { adminData, adminLoading, refreshAdminData } = useAppBootstrap();
+  const { logout } = useAuth();
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [search, setSearch] = useState('');
@@ -794,32 +798,25 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false);
 
   const loadDashboard = async () => {
-    setLoading(true);
     try {
-      const [categoryData, itemData] = await Promise.all([
-        adminMenuService.getCategories(),
-        adminMenuService.getItems(),
-      ]);
-
-      setCategories(categoryData);
-      setProducts(itemData.map(mapMenuItem));
-
-      try {
-        const promoData = await homePromoService.getAdminPromos();
-        setHomePromos(promoData.length > 0 ? promoData.map(mapHomePromoSlide) : defaultHomePromos());
-      } catch {
-        setHomePromos(defaultHomePromos());
-      }
+      await refreshAdminData();
     } catch (err: any) {
       Alert.alert('Unable to load dashboard', err.message || 'Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    if (adminData.categories.length > 0 || adminData.items.length > 0 || adminData.promos.length > 0 || !adminLoading) {
+      setCategories(adminData.categories);
+      setProducts(adminData.items.map(mapMenuItem));
+      setHomePromos(adminData.promos.length > 0 ? adminData.promos.map(mapHomePromoSlide) : defaultHomePromos());
+      setLoading(false);
+    }
+  }, [adminData, adminLoading]);
 
   const totalItems = products.length;
   const available = products.filter((p) => p.isAvailable).length;
@@ -853,6 +850,7 @@ export default function Dashboard() {
 
       const category = categories.find((item) => item.id === created.categoryId) ?? null;
       setProducts((prev) => [mapMenuItem({ ...created, category }), ...prev]);
+      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -900,6 +898,7 @@ export default function Dashboard() {
 
     const category = categories.find((entry) => entry.id === updated.categoryId) ?? null;
     setProducts((prev) => prev.map((product) => (product.id === item.id ? mapMenuItem({ ...updated, category }) : product)));
+    refreshAdminData().catch(() => {});
   };
 
   const toggleAvailable = async (item: DashboardProduct) => {
@@ -922,6 +921,7 @@ export default function Dashboard() {
     try {
       await adminMenuService.deleteItem(item.id);
       setProducts((prev) => prev.filter((product) => product.id !== item.id));
+      refreshAdminData().catch(() => {});
     } catch (err: any) {
       Alert.alert('Unable to delete item', err.message || 'Please try again.');
     }
@@ -953,6 +953,7 @@ export default function Dashboard() {
         });
         setCategories((prev) => [...prev, created].sort((a, b) => a.displayOrder - b.displayOrder));
       }
+      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
       setEditingCategory(null);
@@ -963,6 +964,7 @@ export default function Dashboard() {
     try {
       await adminMenuService.deleteCategory(category.id);
       setCategories((prev) => prev.filter((item) => item.id !== category.id));
+      refreshAdminData().catch(() => {});
     } catch (err: any) {
       Alert.alert('Unable to delete category', err.message || 'Please try again.');
     }
@@ -970,8 +972,8 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     try {
-      await authService.logout();
-      router.replace('/');
+      await logout();
+      router.replace('/(auth)/Continue');
     } catch (err: any) {
       Alert.alert('Unable to logout', err.message || 'Please try again.');
     }
@@ -997,6 +999,7 @@ export default function Dashboard() {
 
       const updated = await homePromoService.updatePromos(payload);
       setHomePromos(updated.map(mapHomePromoSlide));
+      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -1030,10 +1033,7 @@ export default function Dashboard() {
         </View>
 
         {loading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={TEAL} />
-            <Text style={styles.loadingText}>Loading menu dashboard...</Text>
-          </View>
+          <DashboardSkeleton />
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[3]}>
             <View style={styles.statsRow}>
