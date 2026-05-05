@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SeaTachys.Domain.Entities;
 using SeaTachys.Infrastructure.Persistence;
@@ -9,6 +10,8 @@ namespace SeaTachys.Api.Controllers;
 
 [ApiController]
 [Route("api/home/promos")]
+[AllowAnonymous]
+[EnableRateLimiting("public-read")]
 public class HomePromosController : ControllerBase
 {
     private readonly AppDbContext _db;

@@ -10,7 +10,6 @@ import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '../themed-text';
 import Button from '@/components/ui/Button';
 import { useAuth, AuthUser } from '@/hooks/use-auth';
-import { authService } from '@/services/auth.services';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Feather from '@expo/vector-icons/Feather';
@@ -41,7 +40,7 @@ type Props = {
 export default function SideBar({ isOpen, onClose }: Props) {
   const colors = useTheme();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogin = () => {
     onClose();
@@ -49,9 +48,9 @@ export default function SideBar({ isOpen, onClose }: Props) {
   };
 
   const handleLogout = async () => {
-    await authService.logout();
+    await logout();
     onClose();
-    router.replace('/');
+    router.replace('/(auth)/Continue');
   }
 
   return (

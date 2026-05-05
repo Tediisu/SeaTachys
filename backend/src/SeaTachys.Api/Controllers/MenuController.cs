@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SeaTachys.Infrastructure.Persistence;
 
@@ -6,6 +8,8 @@ namespace SeaTachys.Api.Controllers;
 
 [ApiController]
 [Route("api/menu")]
+[AllowAnonymous]
+[EnableRateLimiting("public-read")]
 public class MenuController : ControllerBase
 {
     private readonly AppDbContext _db;

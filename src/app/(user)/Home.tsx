@@ -1,6 +1,7 @@
-import { ActivityIndicator, StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, Image, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FontSize, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -11,10 +12,13 @@ import CategoryButton from '@/components/ui/Category-Button';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/hooks/use-auth';
-import { menuService, type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
-import { homePromoService, type HomePromoSlide as HomePromoSlideDto } from '@/services/home-promo.services';
+import { type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
 import { useRouter } from 'expo-router';
 import { useCart } from '@/hooks/use-cart';
+import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
+import { optimizeImageUrl } from '@/utils/image';
+import Skeleton from '@/components/ui/Skeleton';
+import { HomeScreenSkeleton } from '@/components/ui/SkeletonScreens';
 
 const categoryImageMap: Record<string, number> = {
   All: require('@/assets/imgs/wave.png'),
@@ -53,6 +57,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const router = useRouter();
   const { itemCount } = useCart();
+  const { publicData, publicLoading, refreshPublicData } = useAppBootstrap();
   const sliderRef = useRef<FlatList<PromoSlide>>(null);
 
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -60,9 +65,9 @@ export default function Home() {
   const [items, setItems] = useState<HomeProduct[]>([]);
   const [categories, setCategories] = useState<MenuCategoryDto[]>([]);
   const [promoOverrides, setPromoOverrides] = useState<PromoSlide[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [promoImageReady, setPromoImageReady] = useState<Record<string, boolean>>({});
 
   const ui = useMemo(() => {
     const isCompact = width < 390;
@@ -84,61 +89,55 @@ export default function Home() {
     };
   }, [width]);
 
+  useEffect(() => {
+    const categoryById = new Map<string, MenuCategoryDto>(
+      publicData.categories.map((category: MenuCategoryDto) => [category.id, category])
+    );
+
+    const mappedItems = publicData.items.map((item: MenuItemDto) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      description: item.description,
+      image: item.imageUrl || null,
+      category: item.categoryId ? categoryById.get(item.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
+      rating: 4.5,
+      isFeatured: item.isFeatured,
+      displayOrder: item.displayOrder,
+    }));
+
+    setCategories(publicData.categories);
+    setItems(mappedItems);
+    setPromoOverrides(
+      publicData.promos
+        .sort((a, b) => a.position - b.position)
+        .map((slide) => ({
+          id: `remote-${slide.position}`,
+          badge: slide.badge,
+          eyebrow: slide.eyebrow,
+          title: slide.title,
+          subtitle: slide.subtitle,
+          statLabel: slide.statLabel,
+          statValue: slide.statValue,
+          image: slide.imageUrl ?? null,
+        }))
+    );
+  }, [publicData]);
+
+  const loading = publicLoading && items.length === 0 && categories.length === 0;
+
   const loadMenu = async (showRefresh = false) => {
-    if (showRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
+    if (!showRefresh) {
+      return;
     }
 
+    setRefreshing(true);
     try {
-      const [categoryData, itemData, promoData] = await Promise.all([
-        menuService.getCategories(),
-        menuService.getItems(),
-        homePromoService.getPublicPromos().catch(() => [] as HomePromoSlideDto[]),
-      ]);
-
-      const categoryById = new Map<string, MenuCategoryDto>(
-        categoryData.map((category: MenuCategoryDto) => [category.id, category])
-      );
-
-      const mappedItems = itemData.map((item: MenuItemDto) => ({
-        id: item.id,
-        name: item.name,
-        price: Number(item.price),
-        description: item.description,
-        image: item.imageUrl || null,
-        category: item.categoryId ? categoryById.get(item.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
-        rating: 4.5,
-        isFeatured: item.isFeatured,
-        displayOrder: item.displayOrder,
-      }));
-
-      setCategories(categoryData);
-      setItems(mappedItems);
-      setPromoOverrides(
-        promoData
-          .sort((a, b) => a.position - b.position)
-          .map((slide) => ({
-            id: `remote-${slide.position}`,
-            badge: slide.badge,
-            eyebrow: slide.eyebrow,
-            title: slide.title,
-            subtitle: slide.subtitle,
-            statLabel: slide.statLabel,
-            statValue: slide.statValue,
-            image: slide.imageUrl ?? null,
-          }))
-      );
+      await refreshPublicData();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
   };
-
-  useEffect(() => {
-    loadMenu();
-  }, []);
 
   const categoryButtons = useMemo(
     () => [
@@ -252,7 +251,7 @@ export default function Home() {
   const renderPromoSlide = ({ item }: { item: PromoSlide }) => {
     const imageSource =
       typeof item.image === 'string'
-        ? { uri: item.image }
+        ? optimizeImageUrl(item.image, { width: 320, height: 320, fit: 'cover' }) ?? item.image
         : item.image || require('@/assets/images/icon.png');
 
     return (
@@ -274,7 +273,18 @@ export default function Home() {
           </View>
         </View>
 
-        <Image source={imageSource} style={styles.promoImage} />
+        <View style={styles.promoImageWrap}>
+          <Image
+            source={imageSource}
+            style={styles.promoImage}
+            contentFit="cover"
+            transition={120}
+            cachePolicy="memory-disk"
+            onLoadStart={() => setPromoImageReady((current) => ({ ...current, [item.id]: false }))}
+            onLoadEnd={() => setPromoImageReady((current) => ({ ...current, [item.id]: true }))}
+          />
+          {!promoImageReady[item.id] ? <Skeleton style={styles.promoImage} radius={20} /> : null}
+        </View>
       </View>
     );
   };
@@ -283,10 +293,7 @@ export default function Home() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {loading ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <ThemedText style={styles.loadingText}>Loading the latest menu...</ThemedText>
-          </View>
+          <HomeScreenSkeleton />
         ) : (
           <FlatList
             data={filteredProducts}
@@ -452,17 +459,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-  },
-  loadingState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    color: '#0F2F57',
-    fontSize: FontSize.body,
-    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
@@ -737,7 +733,9 @@ const styles = StyleSheet.create({
     height: 136,
     marginRight: 8,
     borderRadius: 20,
-    resizeMode: 'cover',
+  },
+  promoImageWrap: {
+    position: 'relative',
   },
   heroPagination: {
     zIndex: 2,

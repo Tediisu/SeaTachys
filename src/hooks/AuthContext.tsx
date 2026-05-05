@@ -13,6 +13,8 @@ type AuthContextType = {
   loading: boolean;
   error: string;
   refetch: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,6 +22,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   error: '',
   refetch: async () => {},
+  login: async () => {},
+  logout: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -32,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await authService.getMe();
       console.log('✓ Auth: logged in as', data?.email, '|', data?.role);
       setUser(data);
+      setError('');
     } catch (err: any) {
       console.log('✗ Auth: not logged in —', err.message);
       setUser(null);
@@ -41,12 +46,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const login = async (email: string, password: string) => {
+    setLoading(true);
+
+    try {
+      await authService.login(email, password);
+      await fetchUser();
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    }
+  };
+
+  const logout = async () => {
+    await authService.logout();
+    setUser(null);
+    setError('');
+    setLoading(false);
+  };
+
   useEffect(() => {
     fetchUser();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, refetch: fetchUser }}>
+    <AuthContext.Provider value={{ user, loading, error, refetch: fetchUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,6 +5,7 @@ export const authService = {
   login: async (email: string, password: string) => {
     const data = await apiFetch('/api/auth/login', 'POST', { email: email.trim().toLowerCase(), password }, false);
     await storage.saveToken(data.token);
+    await storage.saveRefreshToken(data.refreshToken);
     return data;
   },
 
@@ -27,6 +28,16 @@ export const authService = {
   },
 
   logout: async () => {
-    await storage.removeToken();
+    const refreshToken = await storage.getRefreshToken();
+
+    if (refreshToken) {
+      try {
+        await apiFetch('/api/auth/logout', 'POST', { refreshToken });
+      } catch {
+        // Keep logout resilient even if the backend session is already expired.
+      }
+    }
+
+    await storage.clearAuth();
   },
 };

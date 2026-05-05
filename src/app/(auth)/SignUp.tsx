@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/use-auth';
 export default function SignUp() {
   const colors = useTheme();
   const router = useRouter();
-  const { refetch } = useAuth();
+  const { login } = useAuth();
   const { width, height } = useWindowDimensions();
 
   const [name, setName] = useState('');
@@ -75,8 +75,7 @@ export default function SignUp() {
         phoneNumber: normalizedPhone || null,
       });
 
-      await authService.login(normalizedEmail, password);
-      await refetch();
+      await login(normalizedEmail, password);
       router.replace('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed.');
