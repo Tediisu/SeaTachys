@@ -1,6 +1,50 @@
+import Constants from 'expo-constants';
 import { storage } from '@/utils/storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const EXPO_HOST_CANDIDATES = [
+  Constants.expoConfig?.hostUri,
+  Constants.expoGoConfig?.debuggerHost,
+  Constants.linkingUri,
+].filter(Boolean) as string[];
+
+const getExpoHost = () => {
+  for (const candidate of EXPO_HOST_CANDIDATES) {
+    const match = candidate.match(/^(?:[^:]+:\/\/)?([^:/?]+)/);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+};
+
+const resolveApiUrl = () => {
+  const rawUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (!rawUrl) {
+    throw new Error('EXPO_PUBLIC_API_URL is not configured');
+  }
+
+  try {
+    const url = new URL(rawUrl);
+    const isLocalHost =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '0.0.0.0';
+
+    if (isLocalHost) {
+      const expoHost = getExpoHost();
+      if (expoHost) {
+        url.hostname = expoHost;
+      }
+    }
+
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return rawUrl.replace(/\/$/, '');
+  }
+};
+
+const API_URL = resolveApiUrl();
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 

@@ -47,7 +47,8 @@
         {
           "photosPermission": "SeaTachys needs access to your photos to add product images."
         }
-      ]
+      ],
+      "./plugins/with-ios-dev-build-fixes"
     ],
     "experiments": {
       "typedRoutes": true,

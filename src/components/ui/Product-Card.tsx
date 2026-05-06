@@ -2,7 +2,6 @@ import { View, StyleSheet, Pressable, ImageSourcePropType } from 'react-native';
 import { useState } from 'react';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
-import { useTheme } from '@/hooks/use-theme';
 import { FontSize, Radius, Spacing } from '@/constants/theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { optimizeImageUrl } from '@/utils/image';
@@ -25,7 +24,6 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ item, onPress, compact = false }: ProductCardProps) {
-  const colors = useTheme();
   const [imageReady, setImageReady] = useState(typeof item.image !== 'string');
 
   const imageSource =
@@ -52,8 +50,8 @@ export default function ProductCard({ item, onPress, compact = false }: ProductC
 
       <View style={styles.info}>
         <View style={styles.topMeta}>
-          <View style={[styles.categoryPill, { backgroundColor: colors.backgroundElement }]}>
-            <ThemedText style={[styles.categoryText, { color: colors.primary }]}>
+          <View style={styles.categoryPill}>
+            <ThemedText style={styles.categoryText}>
               {item.category}
             </ThemedText>
           </View>
@@ -73,7 +71,7 @@ export default function ProductCard({ item, onPress, compact = false }: ProductC
             <ThemedText style={styles.priceLabel}>Starts at</ThemedText>
             <ThemedText style={styles.price}>P{item.price.toFixed(2)}</ThemedText>
           </View>
-          <View style={[styles.addButton, { backgroundColor: colors.accent }]}>
+          <View style={styles.addButton}>
             <Ionicons name="add" size={18} color="#FFFFFF" />
           </View>
         </View>
@@ -115,10 +113,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
+    backgroundColor: '#EEF3F8',
   },
   categoryText: {
     fontSize: FontSize.xs,
     fontWeight: '700',
+    color: '#0F2F57',
   },
   ratingWrap: {
     flexDirection: 'row',
@@ -165,5 +165,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FF8E00',
   },
 });
