@@ -35,6 +35,32 @@ public class HomePromosController : ControllerBase
 }
 
 [ApiController]
+[Route("api/home/banner")]
+[AllowAnonymous]
+[EnableRateLimiting("public-read")]
+public class HomeBannerController : ControllerBase
+{
+    private readonly AppDbContext _db;
+
+    public HomeBannerController(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBanner()
+    {
+        var banner = await HomeTopBannerSettingsStore.ReadAsync(_db);
+        if (banner is not null)
+        {
+            return Ok(banner);
+        }
+
+        return Ok(await HomeTopBannerSettingsStore.BuildFallbackAsync(_db));
+    }
+}
+
+[ApiController]
 [Route("api/admin/home-promos")]
 [Authorize(Roles = "admin")]
 public class AdminHomePromosController : ControllerBase
@@ -102,6 +128,63 @@ public class AdminHomePromosController : ControllerBase
     }
 }
 
+ [ApiController]
+[Route("api/admin/home-banner")]
+[Authorize(Roles = "admin")]
+public class AdminHomeBannerController : ControllerBase
+{
+    private readonly AppDbContext _db;
+
+    public AdminHomeBannerController(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBanner()
+    {
+        var banner = await HomeTopBannerSettingsStore.ReadAsync(_db);
+        if (banner is not null)
+        {
+            return Ok(banner);
+        }
+
+        return Ok(await HomeTopBannerSettingsStore.BuildFallbackAsync(_db));
+    }
+
+    [HttpPut]
+    public async Task<IActionResult> UpsertBanner([FromBody] UpdateHomeTopBannerRequest request)
+    {
+        var normalized = HomeTopBannerSettingsStore.Normalize(request.Banner);
+
+        if (string.IsNullOrWhiteSpace(normalized.Badge) ||
+            string.IsNullOrWhiteSpace(normalized.Title) ||
+            string.IsNullOrWhiteSpace(normalized.CtaLabel))
+        {
+            return BadRequest("Badge, title, and CTA label are required.");
+        }
+
+        var setting = await _db.StoreSettings.FirstOrDefaultAsync(s => s.Key == HomeTopBannerSettingsStore.Key);
+
+        if (setting == null)
+        {
+            setting = new StoreSetting
+            {
+                Id = Guid.NewGuid(),
+                Key = HomeTopBannerSettingsStore.Key,
+                Description = "Customer home top promo banner content"
+            };
+            _db.StoreSettings.Add(setting);
+        }
+
+        setting.Value = JsonSerializer.Serialize(normalized, HomePromoSettingsStore.JsonOptions);
+        setting.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync();
+        return Ok(normalized);
+    }
+}
+
 public record HomePromoSlideDto(
     int Position,
     string Badge,
@@ -113,7 +196,18 @@ public record HomePromoSlideDto(
     string? ImageUrl
 );
 
+public record HomeTopBannerDto(
+    string Badge,
+    string Eyebrow,
+    string Title,
+    string Subtitle,
+    string CtaLabel,
+    string AccentText,
+    string? ImageUrl
+);
+
 public record UpdateHomePromosRequest(List<HomePromoSlideDto> Slides);
+public record UpdateHomeTopBannerRequest(HomeTopBannerDto Banner);
 
 internal static class HomePromoSettingsStore
 {
@@ -217,5 +311,71 @@ internal static class HomePromoSettingsStore
                 spotlight?.ImageUrl
             )
         ];
+    }
+}
+
+internal static class HomeTopBannerSettingsStore
+{
+    internal const string Key = "home_top_banner";
+
+    internal static async Task<HomeTopBannerDto?> ReadAsync(AppDbContext db)
+    {
+        var raw = await db.StoreSettings
+            .AsNoTracking()
+            .Where(setting => setting.Key == Key)
+            .Select(setting => setting.Value)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        try
+        {
+            var banner = JsonSerializer.Deserialize<HomeTopBannerDto>(raw, HomePromoSettingsStore.JsonOptions);
+            return banner is null ? null : Normalize(banner);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    internal static HomeTopBannerDto Normalize(HomeTopBannerDto banner) =>
+        new(
+            banner.Badge.Trim(),
+            banner.Eyebrow.Trim(),
+            banner.Title.Trim(),
+            banner.Subtitle.Trim(),
+            banner.CtaLabel.Trim(),
+            banner.AccentText.Trim(),
+            string.IsNullOrWhiteSpace(banner.ImageUrl) ? null : banner.ImageUrl.Trim()
+        );
+
+    internal static async Task<HomeTopBannerDto> BuildFallbackAsync(AppDbContext db)
+    {
+        var featured = await db.MenuItems
+            .AsNoTracking()
+            .Where(item => item.IsAvailable)
+            .OrderByDescending(item => item.IsFeatured)
+            .ThenBy(item => item.DisplayOrder)
+            .Select(item => new
+            {
+                item.Name,
+                item.Description,
+                item.ImageUrl
+            })
+            .FirstOrDefaultAsync();
+
+        return new HomeTopBannerDto(
+            "Fresh Drop",
+            "SEATACHYS EXPRESS",
+            featured?.Name ?? "Seafood cravings solved fast",
+            featured?.Description ?? "Order your campus favorites with a brighter new home banner.",
+            "Order now",
+            "Open today",
+            featured?.ImageUrl
+        );
     }
 }

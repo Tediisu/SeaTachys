@@ -11,6 +11,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { authService } from '@/services/auth.services';
 import { useAuth } from '@/hooks/use-auth';
 
+const INPUT_TEXT_COLOR = '#111827';
+
 export default function SignUp() {
   const colors = useTheme();
   const router = useRouter();
@@ -157,9 +159,12 @@ export default function SignUp() {
                   <TextInput
                     placeholder="Full name"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={name}
                     onChangeText={setName}
+                    keyboardAppearance="light"
+                    selectionColor={colors.accentShade}
+                    cursorColor={colors.accentShade}
                   />
                 </View>
               </View>
@@ -171,12 +176,15 @@ export default function SignUp() {
                   <TextInput
                     placeholder="Email"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
+                    keyboardAppearance="light"
+                    selectionColor={colors.accentShade}
+                    cursorColor={colors.accentShade}
                   />
                 </View>
               </View>
@@ -188,10 +196,13 @@ export default function SignUp() {
                   <TextInput
                     placeholder="Optional"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                     keyboardType="phone-pad"
+                    keyboardAppearance="light"
+                    selectionColor={colors.accentShade}
+                    cursorColor={colors.accentShade}
                   />
                 </View>
               </View>
@@ -203,10 +214,13 @@ export default function SignUp() {
                   <TextInput
                     placeholder="At least 8 characters"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    keyboardAppearance="light"
+                    selectionColor={colors.accentShade}
+                    cursorColor={colors.accentShade}
                   />
                 </View>
               </View>
@@ -218,10 +232,13 @@ export default function SignUp() {
                   <TextInput
                     placeholder="Repeat password"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
+                    keyboardAppearance="light"
+                    selectionColor={colors.accentShade}
+                    cursorColor={colors.accentShade}
                   />
                 </View>
               </View>
@@ -356,6 +373,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.body,
     fontWeight: '500',
+    color: INPUT_TEXT_COLOR,
   },
   errorText: {
     color: '#FFE2E2',

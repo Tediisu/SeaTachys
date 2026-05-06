@@ -1,4 +1,6 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -7,10 +9,12 @@ import { ThemedView } from '@/components/themed-view';
 import Button from '@/components/ui/Button';
 import { useCart } from '@/hooks/use-cart';
 import { FontSize } from '@/constants/theme';
+import Skeleton from '@/components/ui/Skeleton';
 
 export default function CartScreen() {
   const router = useRouter();
   const { items, subtotal, updateQuantity, removeItem } = useCart();
+  const [readyImages, setReadyImages] = useState<Record<string, boolean>>({});
 
   return (
     <ThemedView style={styles.container}>
@@ -47,7 +51,18 @@ export default function CartScreen() {
 
                 return (
                   <View key={item.id} style={styles.cartItem}>
-                    <Image source={imageSource} style={styles.cartImage} />
+                    <View style={styles.cartImageWrap}>
+                      <Image
+                        source={imageSource}
+                        style={styles.cartImage}
+                        contentFit="cover"
+                        transition={120}
+                        cachePolicy="memory-disk"
+                        onLoadStart={() => setReadyImages((current) => ({ ...current, [item.id]: false }))}
+                        onLoadEnd={() => setReadyImages((current) => ({ ...current, [item.id]: true }))}
+                      />
+                      {!readyImages[item.id] ? <Skeleton style={styles.cartImage} radius={18} /> : null}
+                    </View>
                     <View style={styles.cartInfo}>
                       <ThemedText style={styles.itemName}>{item.name}</ThemedText>
                       <ThemedText style={styles.itemMeta}>{item.category}</ThemedText>
@@ -163,6 +178,9 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 18,
+  },
+  cartImageWrap: {
+    position: 'relative',
   },
   cartInfo: {
     flex: 1,

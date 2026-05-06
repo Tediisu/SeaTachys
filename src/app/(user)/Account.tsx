@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { FontSize } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
+import { AccountScreenSkeleton } from '@/components/ui/SkeletonScreens';
 
 function AccountRow({
   icon,
@@ -34,12 +35,22 @@ function AccountRow({
 
 export default function AccountScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, loading } = useAuth();
 
   const handleLogout = async () => {
     await logout();
     router.replace('/(auth)/Continue');
   };
+
+  if (loading || !user) {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <AccountScreenSkeleton />
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -50,10 +61,10 @@ export default function AccountScreen() {
               <Feather name="user" size={34} color="#FFFFFF" />
             </View>
             <View style={styles.headerText}>
-              <ThemedText style={styles.name}>{user?.fullname ?? 'Guest User'}</ThemedText>
-              <ThemedText style={styles.email}>{user?.email ?? 'Sign in to personalize your account'}</ThemedText>
+              <ThemedText style={styles.name}>{user.fullname}</ThemedText>
+              <ThemedText style={styles.email}>{user.email}</ThemedText>
               <View style={styles.rolePill}>
-                <ThemedText style={styles.roleText}>{user?.role ?? 'guest'}</ThemedText>
+                <ThemedText style={styles.roleText}>{user.role}</ThemedText>
               </View>
             </View>
           </View>
@@ -94,7 +105,7 @@ export default function AccountScreen() {
               caption="FAQs and support"
               onPress={() => Alert.alert('Coming soon', 'Help and support can be added next.')}
             />
-            {user?.role === 'admin' ? (
+            {user.role === 'admin' ? (
               <AccountRow
                 icon={<MaterialCommunityIcons name="view-dashboard-outline" size={20} color="#111827" />}
                 label="Admin dashboard"

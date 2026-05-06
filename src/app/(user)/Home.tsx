@@ -51,6 +51,16 @@ type PromoSlide = {
   image: ImageSourcePropType | string | null;
 };
 
+type TopBanner = {
+  badge: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  accentText: string;
+  image: ImageSourcePropType | string | null;
+};
+
 export default function Home() {
   const colors = useTheme();
   const { user } = useAuth();
@@ -68,6 +78,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [promoImageReady, setPromoImageReady] = useState<Record<string, boolean>>({});
+  const [topBannerImageReady, setTopBannerImageReady] = useState(false);
 
   const ui = useMemo(() => {
     const isCompact = width < 390;
@@ -83,9 +94,11 @@ export default function Home() {
       contentWidth,
       cardWidth,
       heroPadding,
-      heroHeight: isCompact ? 280 : 300,
+      heroHeight: isCompact ? 256 : 274,
       promoHeight: isCompact ? 154 : 164,
       heroSlideWidth: contentWidth - heroPadding * 2,
+      topBannerHeight: isCompact ? 136 : 148,
+      topBannerImageSize: isCompact ? 92 : 104,
     };
   }, [width]);
 
@@ -225,6 +238,33 @@ export default function Home() {
     [fallbackPromoSlides, promoOverrides]
   );
 
+  const topBanner = useMemo<TopBanner>(() => {
+    const spotlightItem = featuredItems[0] ?? items[0] ?? null;
+    const fallbackImage = require('@/assets/images/crispy-shrimp.jpg');
+
+    if (publicData.banner) {
+      return {
+        badge: publicData.banner.badge,
+        eyebrow: publicData.banner.eyebrow,
+        title: publicData.banner.title,
+        subtitle: publicData.banner.subtitle,
+        ctaLabel: publicData.banner.ctaLabel,
+        accentText: publicData.banner.accentText,
+        image: publicData.banner.imageUrl ?? spotlightItem?.image ?? fallbackImage,
+      };
+    }
+
+    return {
+      badge: 'Fresh Drop',
+      eyebrow: 'SEATACHYS EXPRESS',
+      title: spotlightItem ? `Try ${spotlightItem.name} today` : 'Seafood cravings solved fast',
+      subtitle: spotlightItem?.description ?? 'Campus favorites, bright promos, and quick seafood cravings in one tap.',
+      ctaLabel: 'Order now',
+      accentText: itemCount > 0 ? `${itemCount} in cart` : 'Open today',
+      image: spotlightItem?.image ?? fallbackImage,
+    };
+  }, [featuredItems, itemCount, items, publicData.banner]);
+
   useEffect(() => {
     setCurrentSlideIndex((prev) => Math.min(prev, Math.max(promoSlides.length - 1, 0)));
   }, [promoSlides.length]);
@@ -289,6 +329,11 @@ export default function Home() {
     );
   };
 
+  const topBannerImageSource =
+    typeof topBanner.image === 'string'
+      ? optimizeImageUrl(topBanner.image, { width: 440, height: 360, fit: 'cover' }) ?? topBanner.image
+      : topBanner.image || require('@/assets/images/icon.png');
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -331,45 +376,81 @@ export default function Home() {
             }
             ListHeaderComponent={
               <View style={[styles.pageContent, { width: ui.contentWidth, alignSelf: 'center' }]}>
-                <View style={styles.headerRow}>
-                  <View style={[styles.locationCard, styles.locationCardFull]}>
-                    <View style={styles.locationTopRow}>
-                      <View style={styles.locationIconWrap}>
-                        <Ionicons name="location" size={18} color="#FFFFFF" />
+                <View
+                  style={[
+                    styles.topPromoShell,
+                    {
+                      marginHorizontal: -ui.pagePadding,
+                      paddingHorizontal: ui.pagePadding + 4,
+                      paddingTop: 10,
+                    },
+                  ]}>
+                  <View style={styles.topPromoGlowLarge} />
+                  <View style={styles.topPromoGlowSmall} />
+
+                  <View style={styles.topPromoHeaderRow}>
+                    <View style={styles.topAddressRow}>
+                      <View style={styles.topAddressIconWrap}>
+                        <Ionicons name="location-outline" size={18} color="#FFFFFF" />
                       </View>
-                      <View style={styles.locationTextWrap}>
-                        <ThemedText style={styles.locationLabel}>DELIVERY ADDRESS</ThemedText>
-                        <ThemedText style={styles.locationValue}>Rawr Bldg</ThemedText>
-                        <ThemedText style={styles.locationHint}>Delivered near your campus stop.</ThemedText>
-                      </View>
-                      <View style={styles.locationStatusPill}>
-                        <ThemedText style={styles.locationStatusText}>Live</ThemedText>
+                      <View style={styles.topAddressTextWrap}>
+                        <ThemedText style={styles.topAddressTitle} numberOfLines={1}>Rawr Bldg</ThemedText>
+                        <ThemedText style={styles.topAddressSubtitle} numberOfLines={1}>Delivered near your campus stop</ThemedText>
                       </View>
                     </View>
-                    <View style={styles.locationMetaRow}>
-                      {itemCount > 0 ? (
-                        <View style={styles.inlineCartPill}>
-                          <Ionicons name="bag-handle-outline" size={12} color="#0F2F57" />
-                          <ThemedText style={styles.inlineCartText}>{itemCount} in cart</ThemedText>
+                    <Pressable style={styles.topPromoActionIcon} onPress={() => router.push('/(user)/Account')}>
+                      <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+
+                  <View style={[styles.topPromoBannerCard, { minHeight: ui.topBannerHeight }]}>
+                    <View style={styles.topPromoBannerCopy}>
+                      <View style={styles.topPromoBannerBadge}>
+                        <ThemedText style={styles.topPromoBannerBadgeText} numberOfLines={1}>{topBanner.badge}</ThemedText>
+                      </View>
+                      <ThemedText style={styles.topPromoBannerEyebrow} numberOfLines={1}>{topBanner.eyebrow}</ThemedText>
+                      <ThemedText style={styles.topPromoBannerTitle} numberOfLines={3}>{topBanner.title}</ThemedText>
+                      <ThemedText style={styles.topPromoBannerSubtitle} numberOfLines={2}>{topBanner.subtitle}</ThemedText>
+
+                      <View style={styles.topPromoBannerFooter}>
+                        <View style={styles.topPromoBannerCta}>
+                          <ThemedText style={styles.topPromoBannerCtaText}>{topBanner.ctaLabel}</ThemedText>
+                          <Ionicons name="arrow-forward-circle" size={18} color="#8B1874" />
                         </View>
-                      ) : null}
+                        <ThemedText style={styles.topPromoBannerAccent}>{topBanner.accentText}</ThemedText>
+                      </View>
+                    </View>
+
+                    <View style={[styles.topPromoBannerImageWrap, { width: ui.topBannerImageSize, height: ui.topBannerImageSize }]}>
+                      <Image
+                        source={topBannerImageSource}
+                        style={styles.topPromoBannerImage}
+                        contentFit="cover"
+                        transition={120}
+                        cachePolicy="memory-disk"
+                        onLoadStart={() => setTopBannerImageReady(false)}
+                        onLoadEnd={() => setTopBannerImageReady(true)}
+                      />
+                      {!topBannerImageReady ? <Skeleton style={styles.topPromoBannerImage} radius={24} /> : null}
                     </View>
                   </View>
                 </View>
 
-                <View style={[styles.heroCard, { minHeight: ui.heroHeight, backgroundColor: colors.primary, padding: ui.heroPadding }]}>
+                <View
+                  style={[
+                    styles.heroCard,
+                    {
+                      minHeight: ui.heroHeight,
+                      backgroundColor: colors.primary,
+                      padding: ui.heroPadding,
+                      marginTop: 8,
+                    },
+                  ]}>
                   <View style={styles.heroGlowTop} />
                   <View style={styles.heroGlowBottom} />
 
                   <View style={styles.heroIntroRow}>
-                    <View>
-                      <ThemedText style={styles.heroKicker}>Fresh for {firstName}</ThemedText>
-                      <ThemedText style={styles.heroHeading}>Today&apos;s seafood picks</ThemedText>
-                    </View>
-                    <View style={styles.heroCounterPill}>
-                      <ThemedText style={styles.heroCounterValue}>{promoSlides.length}</ThemedText>
-                      <ThemedText style={styles.heroCounterLabel}>slides</ThemedText>
-                    </View>
+                    <View style={styles.heroIntroSpacer} />
                   </View>
 
                   <FlatList
@@ -399,11 +480,11 @@ export default function Home() {
 
                   <View style={styles.searchWrap}>
                     <View style={styles.searchBar}>
-                      <FontAwesome6 name="magnifying-glass" size={16} color={colors.textSecondary} />
+                      <FontAwesome6 name="magnifying-glass" size={16} color="#7B8797" />
                       <TextInput
                         placeholder="Search dishes"
-                        placeholderTextColor={colors.textSecondary}
-                        style={[styles.searchInput, { color: colors.text }]}
+                        placeholderTextColor="#7B8797"
+                        style={styles.searchInput}
                         value={search}
                         onChangeText={setSearch}
                       />
@@ -481,107 +562,166 @@ const styles = StyleSheet.create({
   pageContent: {
     marginBottom: 18,
   },
-  headerRow: {
+  topPromoShell: {
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#8B1874',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    marginBottom: 0,
+    paddingBottom: 10,
+  },
+  topPromoGlowLarge: {
+    position: 'absolute',
+    top: -44,
+    right: -36,
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  topPromoGlowSmall: {
+    position: 'absolute',
+    bottom: 28,
+    left: -32,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,132,202,0.22)',
+  },
+  topPromoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
+  },
+  topAddressRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 18,
   },
-  locationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  topAddressIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(15,47,87,0.06)',
-    shadowColor: '#00172F',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  locationCardFull: {
-    flex: 1,
-  },
-  locationTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  locationIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: '#0F2F57',
+    borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F2F57',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    elevation: 3,
   },
-  locationTextWrap: {
+  topAddressTextWrap: {
     flex: 1,
   },
-  locationLabel: {
-    color: '#7B8797',
-    fontSize: FontSize.xs,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-  },
-  locationValue: {
-    color: '#111827',
-    fontSize: 17,
-    lineHeight: 21,
+  topAddressTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '900',
-    marginTop: 1,
   },
-  locationHint: {
-    color: '#6B7280',
+  topAddressSubtitle: {
+    color: 'rgba(255,255,255,0.78)',
     fontSize: FontSize.xs,
     lineHeight: 15,
-    marginTop: 2,
+    marginTop: 1,
   },
-  locationStatusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#E9F7EF',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+  topPromoActionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  locationStatusText: {
-    color: '#0F6E56',
-    fontSize: FontSize.xs,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-  },
-  locationMetaRow: {
-    marginTop: 12,
+  topPromoBannerCard: {
+    zIndex: 2,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 24,
+    paddingLeft: 16,
+    paddingRight: 12,
+    paddingVertical: 12,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     alignItems: 'center',
     gap: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#EDF2F7',
   },
-  inlineCartPill: {
+  topPromoBannerCopy: {
+    flex: 1,
+  },
+  topPromoBannerBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  topPromoBannerBadgeText: {
+    color: '#8B1874',
+    fontSize: FontSize.xs,
+    fontWeight: '900',
+  },
+  topPromoBannerEyebrow: {
+    color: '#F8CAE9',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  topPromoBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    lineHeight: 25,
+    fontWeight: '900',
+  },
+  topPromoBannerSubtitle: {
+    color: 'rgba(255,255,255,0.84)',
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 6,
+    maxWidth: 170,
+  },
+  topPromoBannerFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10,
+  },
+  topPromoBannerCta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#EEF3F8',
+    backgroundColor: '#FFFFFF',
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  inlineCartText: {
-    color: '#0F2F57',
-    fontSize: FontSize.xs,
+  topPromoBannerCtaText: {
+    color: '#8B1874',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  topPromoBannerAccent: {
+    color: '#FCE7F5',
+    fontSize: 11,
     fontWeight: '800',
   },
+  topPromoBannerImageWrap: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  topPromoBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
   heroCard: {
-    borderRadius: 30,
+    borderRadius: 28,
     overflow: 'hidden',
     marginBottom: 22,
   },
@@ -610,39 +750,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  heroKicker: {
-    color: '#9DD3FF',
-    fontSize: FontSize.xs,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  heroHeading: {
-    color: '#FFFFFF',
-    fontSize: 23,
-    lineHeight: 27,
-    fontWeight: '900',
-    maxWidth: 190,
-  },
-  heroCounterPill: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minWidth: 66,
-    alignItems: 'center',
-  },
-  heroCounterValue: {
-    color: '#FFFFFF',
-    fontSize: FontSize.subtitle,
-    fontWeight: '900',
-  },
-  heroCounterLabel: {
-    color: 'rgba(255,255,255,0.74)',
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+  heroIntroSpacer: {
+    minHeight: 2,
   },
   promoSlider: {
     marginTop: 18,
@@ -651,8 +760,6 @@ const styles = StyleSheet.create({
   promoSlide: {
     borderRadius: 26,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
@@ -772,6 +879,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.body,
     fontWeight: '500',
+    color: '#111827',
   },
   sectionHeader: {
     flexDirection: 'row',
