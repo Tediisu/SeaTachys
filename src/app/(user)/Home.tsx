@@ -1,0 +1,813 @@
+import { StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { FontSize, MaxContentWidth, Spacing } from '@/constants/theme';
+import Button from '@/components/ui/Button';
+import { useTheme } from '@/hooks/use-theme';
+import ProductCard from '@/components/ui/Product-Card';
+import CategoryButton from '@/components/ui/Category-Button';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '@/hooks/use-auth';
+import { type MenuCategoryDto, type MenuItemDto } from '@/services/menu.services';
+import { useRouter } from 'expo-router';
+import { useCart } from '@/hooks/use-cart';
+import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
+import { optimizeImageUrl } from '@/utils/image';
+import Skeleton from '@/components/ui/Skeleton';
+import { HomeScreenSkeleton } from '@/components/ui/SkeletonScreens';
+
+const categoryImageMap: Record<string, number> = {
+  All: require('@/assets/imgs/wave.png'),
+  Fish: require('@/assets/imgs/fish.png'),
+  Crustacean: require('@/assets/imgs/shrimp.png'),
+  Shellfish: require('@/assets/imgs/shellfish.png'),
+  Cephalopod: require('@/assets/imgs/squid.png'),
+};
+
+type HomeProduct = {
+  id: string;
+  name: string;
+  price: number;
+  description?: string | null;
+  image?: string | number | null;
+  category: string;
+  rating?: number;
+  isFeatured: boolean;
+  displayOrder: number;
+};
+
+type PromoSlide = {
+  id: string;
+  badge: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  statLabel: string;
+  statValue: string;
+  image: ImageSourcePropType | string | null;
+};
+
+export default function Home() {
+  const colors = useTheme();
+  const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const router = useRouter();
+  const { itemCount } = useCart();
+  const { publicData, publicLoading, refreshPublicData } = useAppBootstrap();
+  const sliderRef = useRef<FlatList<PromoSlide>>(null);
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const [items, setItems] = useState<HomeProduct[]>([]);
+  const [categories, setCategories] = useState<MenuCategoryDto[]>([]);
+  const [promoOverrides, setPromoOverrides] = useState<PromoSlide[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [promoImageReady, setPromoImageReady] = useState<Record<string, boolean>>({});
+
+  const ui = useMemo(() => {
+    const isCompact = width < 390;
+    const pagePadding = isCompact ? 16 : 20;
+    const gap = isCompact ? 12 : 14;
+    const contentWidth = Math.min(width - pagePadding * 2, MaxContentWidth);
+    const cardWidth = (contentWidth - gap) / 2;
+    const heroPadding = isCompact ? 18 : 22;
+
+    return {
+      pagePadding,
+      gap,
+      contentWidth,
+      cardWidth,
+      heroPadding,
+      heroHeight: isCompact ? 280 : 300,
+      promoHeight: isCompact ? 154 : 164,
+      heroSlideWidth: contentWidth - heroPadding * 2,
+    };
+  }, [width]);
+
+  useEffect(() => {
+    const categoryById = new Map<string, MenuCategoryDto>(
+      publicData.categories.map((category: MenuCategoryDto) => [category.id, category])
+    );
+
+    const mappedItems = publicData.items.map((item: MenuItemDto) => ({
+      id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      description: item.description,
+      image: item.imageUrl || null,
+      category: item.categoryId ? categoryById.get(item.categoryId)?.name ?? 'Uncategorized' : 'Uncategorized',
+      rating: 4.5,
+      isFeatured: item.isFeatured,
+      displayOrder: item.displayOrder,
+    }));
+
+    setCategories(publicData.categories);
+    setItems(mappedItems);
+    setPromoOverrides(
+      publicData.promos
+        .sort((a, b) => a.position - b.position)
+        .map((slide) => ({
+          id: `remote-${slide.position}`,
+          badge: slide.badge,
+          eyebrow: slide.eyebrow,
+          title: slide.title,
+          subtitle: slide.subtitle,
+          statLabel: slide.statLabel,
+          statValue: slide.statValue,
+          image: slide.imageUrl ?? null,
+        }))
+    );
+  }, [publicData]);
+
+  const loading = publicLoading && items.length === 0 && categories.length === 0;
+
+  const loadMenu = async (showRefresh = false) => {
+    if (!showRefresh) {
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      await refreshPublicData();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const categoryButtons = useMemo(
+    () => [
+      { label: 'All', image: categoryImageMap.All },
+      ...categories.map((category) => ({
+        label: category.name,
+        image: categoryImageMap[category.name] || categoryImageMap.All,
+      })),
+    ],
+    [categories]
+  );
+
+  const filteredProducts = useMemo(() => {
+    return items.filter((item) => {
+      const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+      const query = search.trim().toLowerCase();
+      const matchesSearch =
+        query.length === 0 ||
+        item.name.toLowerCase().includes(query) ||
+        (item.description ?? '').toLowerCase().includes(query);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [items, search, selectedCategory]);
+
+  const firstName = user?.fullname?.split(' ')[0] ?? 'Seafood Lover';
+  const featuredItems = useMemo(
+    () =>
+      [...items]
+        .filter((item) => item.isFeatured)
+        .sort((a, b) => a.displayOrder - b.displayOrder),
+    [items]
+  );
+
+  const fallbackPromoSlides = useMemo<PromoSlide[]>(() => {
+    const heroDefaults = {
+      discount: require('@/assets/images/crispy-shrimp.jpg'),
+      limited: require('@/assets/images/sisig-pusit.jpg'),
+      featured: require('@/assets/images/teryaki-salmon.jpg'),
+    } as const;
+
+    const spotlightItem = featuredItems[0] ?? items[0] ?? null;
+    const limitedItem = items.find((item) => item.category !== 'Uncategorized') ?? items[1] ?? spotlightItem;
+
+    return [
+      {
+        id: 'discounts',
+        badge: 'Discounts',
+        eyebrow: 'TODAY',
+        title: 'Fresh seafood deals',
+        subtitle: 'Hot picks at lighter prices.',
+        statLabel: 'Savings',
+        statValue: 'Up to 20%',
+        image: heroDefaults.discount,
+      },
+      {
+        id: 'limited',
+        badge: 'Limited',
+        eyebrow: limitedItem?.category?.toUpperCase() ?? 'SMALL BATCH',
+        title: limitedItem?.name ?? 'Fresh picks landed today',
+        subtitle:
+          limitedItem?.description ??
+          'Small-batch menu for today.',
+        statLabel: 'Starts at',
+        statValue: limitedItem ? `P${limitedItem.price.toFixed(0)}` : 'P199',
+        image: limitedItem?.image ?? heroDefaults.limited,
+      },
+      {
+        id: 'featured',
+        badge: `Hello, ${firstName}`,
+        eyebrow: 'FEATURED',
+        title: spotlightItem ? `Try ${spotlightItem.name}` : 'Chef favorites',
+        subtitle:
+          spotlightItem?.description ??
+          'Popular picks ready to order.',
+        statLabel: 'Featured',
+        statValue: `${Math.max(featuredItems.length, 1)} live`,
+        image: spotlightItem?.image ?? heroDefaults.featured,
+      },
+    ];
+  }, [featuredItems, firstName, items]);
+
+  const promoSlides = useMemo(
+    () => (promoOverrides.length > 0 ? promoOverrides : fallbackPromoSlides),
+    [fallbackPromoSlides, promoOverrides]
+  );
+
+  useEffect(() => {
+    setCurrentSlideIndex((prev) => Math.min(prev, Math.max(promoSlides.length - 1, 0)));
+  }, [promoSlides.length]);
+
+  useEffect(() => {
+    if (promoSlides.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlideIndex((prev) => {
+        const next = (prev + 1) % promoSlides.length;
+        sliderRef.current?.scrollToOffset({ offset: next * ui.heroSlideWidth, animated: true });
+        return next;
+      });
+    }, 4200);
+
+    return () => clearInterval(interval);
+  }, [promoSlides.length, ui.heroSlideWidth]);
+
+  const handleSliderMomentumEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / ui.heroSlideWidth);
+    setCurrentSlideIndex(Math.max(0, Math.min(nextIndex, promoSlides.length - 1)));
+  };
+
+  const renderPromoSlide = ({ item }: { item: PromoSlide }) => {
+    const imageSource =
+      typeof item.image === 'string'
+        ? optimizeImageUrl(item.image, { width: 320, height: 320, fit: 'cover' }) ?? item.image
+        : item.image || require('@/assets/images/icon.png');
+
+    return (
+      <View style={[styles.promoSlide, { width: ui.heroSlideWidth, height: ui.promoHeight }]}>
+        <View style={styles.promoSlideGlow} />
+        <View style={styles.promoCopy}>
+          <View style={styles.promoBadge}>
+            <ThemedText style={styles.promoBadgeText} numberOfLines={1}>{item.badge}</ThemedText>
+          </View>
+          <ThemedText style={styles.promoEyebrow} numberOfLines={1}>{item.eyebrow}</ThemedText>
+          <ThemedText style={styles.promoTitle} numberOfLines={2}>{item.title}</ThemedText>
+          <ThemedText style={styles.promoSubtitle} numberOfLines={1}>
+            {item.subtitle}
+          </ThemedText>
+
+          <View style={styles.promoStatPill}>
+            <ThemedText style={styles.promoStatLabel}>{item.statLabel}</ThemedText>
+            <ThemedText style={styles.promoStatValue}>{item.statValue}</ThemedText>
+          </View>
+        </View>
+
+        <View style={styles.promoImageWrap}>
+          <Image
+            source={imageSource}
+            style={styles.promoImage}
+            contentFit="cover"
+            transition={120}
+            cachePolicy="memory-disk"
+            onLoadStart={() => setPromoImageReady((current) => ({ ...current, [item.id]: false }))}
+            onLoadEnd={() => setPromoImageReady((current) => ({ ...current, [item.id]: true }))}
+          />
+          {!promoImageReady[item.id] ? <Skeleton style={styles.promoImage} radius={20} /> : null}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <ThemedView style={styles.container}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {loading ? (
+          <HomeScreenSkeleton />
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} tintColor={colors.primary} />
+            }
+            columnWrapperStyle={{
+              gap: ui.gap,
+              marginBottom: ui.gap,
+            }}
+            contentContainerStyle={{
+              paddingHorizontal: ui.pagePadding,
+              paddingTop: 8,
+              paddingBottom: 20,
+            }}
+            renderItem={({ item }) => (
+              <View style={{ width: ui.cardWidth }}>
+                <ProductCard
+                  item={item}
+                  compact
+                  onPress={() => router.push(`/(user)/product/${item.id}`)}
+                />
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <ThemedText style={styles.emptyTitle}>No dishes yet</ThemedText>
+                <ThemedText style={styles.emptyText}>
+                  Once the admin adds menu items, they will appear here automatically.
+                </ThemedText>
+              </View>
+            }
+            ListHeaderComponent={
+              <View style={[styles.pageContent, { width: ui.contentWidth, alignSelf: 'center' }]}>
+                <View style={styles.headerRow}>
+                  <View style={[styles.locationCard, styles.locationCardFull]}>
+                    <View style={styles.locationTopRow}>
+                      <View style={styles.locationIconWrap}>
+                        <Ionicons name="location" size={18} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.locationTextWrap}>
+                        <ThemedText style={styles.locationLabel}>DELIVERY ADDRESS</ThemedText>
+                        <ThemedText style={styles.locationValue}>Rawr Bldg</ThemedText>
+                        <ThemedText style={styles.locationHint}>Delivered near your campus stop.</ThemedText>
+                      </View>
+                      <View style={styles.locationStatusPill}>
+                        <ThemedText style={styles.locationStatusText}>Live</ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.locationMetaRow}>
+                      {itemCount > 0 ? (
+                        <View style={styles.inlineCartPill}>
+                          <Ionicons name="bag-handle-outline" size={12} color="#0F2F57" />
+                          <ThemedText style={styles.inlineCartText}>{itemCount} in cart</ThemedText>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
+
+                <View style={[styles.heroCard, { minHeight: ui.heroHeight, backgroundColor: colors.primary, padding: ui.heroPadding }]}>
+                  <View style={styles.heroGlowTop} />
+                  <View style={styles.heroGlowBottom} />
+
+                  <View style={styles.heroIntroRow}>
+                    <View>
+                      <ThemedText style={styles.heroKicker}>Fresh for {firstName}</ThemedText>
+                      <ThemedText style={styles.heroHeading}>Today&apos;s seafood picks</ThemedText>
+                    </View>
+                    <View style={styles.heroCounterPill}>
+                      <ThemedText style={styles.heroCounterValue}>{promoSlides.length}</ThemedText>
+                      <ThemedText style={styles.heroCounterLabel}>slides</ThemedText>
+                    </View>
+                  </View>
+
+                  <FlatList
+                    ref={sliderRef}
+                    data={promoSlides}
+                    renderItem={renderPromoSlide}
+                    keyExtractor={(item) => item.id}
+                    horizontal
+                    pagingEnabled
+                    bounces={false}
+                    showsHorizontalScrollIndicator={false}
+                    onMomentumScrollEnd={handleSliderMomentumEnd}
+                    style={styles.promoSlider}
+                  />
+
+                  <View style={styles.heroPagination}>
+                    {promoSlides.map((slide, index) => (
+                      <View
+                        key={slide.id}
+                        style={[
+                          styles.heroDot,
+                          index === currentSlideIndex ? styles.heroDotActive : null,
+                        ]}
+                      />
+                    ))}
+                  </View>
+
+                  <View style={styles.searchWrap}>
+                    <View style={styles.searchBar}>
+                      <FontAwesome6 name="magnifying-glass" size={16} color={colors.textSecondary} />
+                      <TextInput
+                        placeholder="Search dishes"
+                        placeholderTextColor={colors.textSecondary}
+                        style={[styles.searchInput, { color: colors.text }]}
+                        value={search}
+                        onChangeText={setSearch}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <ThemedText style={styles.sectionTitle}>Browse by Category</ThemedText>
+                    <ThemedText style={styles.sectionCaption}>Choose your seafood mood</ThemedText>
+                  </View>
+                  <Pressable onPress={() => setSelectedCategory('All')}>
+                    <ThemedText style={styles.sectionAction}>See all</ThemedText>
+                  </Pressable>
+                </View>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
+                  {categoryButtons.map((category) => (
+                    <CategoryButton
+                      key={category.label}
+                      image={category.image}
+                      label={category.label}
+                      isSelected={selectedCategory === category.label}
+                      onPress={() => setSelectedCategory(category.label)}
+                    />
+                  ))}
+                </ScrollView>
+
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <ThemedText style={styles.sectionTitle}>Popular Picks</ThemedText>
+                    <ThemedText style={styles.sectionCaption}>Live menu from the admin dashboard</ThemedText>
+                  </View>
+                  <View style={styles.counterPill}>
+                    <ThemedText style={styles.counterText}>{filteredProducts.length} items</ThemedText>
+                  </View>
+                </View>
+              </View>
+            }
+          />
+        )}
+
+      </SafeAreaView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#EEF3F8',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+  },
+  emptyTitle: {
+    color: '#0F2F57',
+    fontSize: FontSize.title,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: FontSize.small,
+    lineHeight: 20,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+  pageContent: {
+    marginBottom: 18,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 18,
+  },
+  locationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(15,47,87,0.06)',
+    shadowColor: '#00172F',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  locationCardFull: {
+    flex: 1,
+  },
+  locationTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  locationIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#0F2F57',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F2F57',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  locationTextWrap: {
+    flex: 1,
+  },
+  locationLabel: {
+    color: '#7B8797',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+  locationValue: {
+    color: '#111827',
+    fontSize: 17,
+    lineHeight: 21,
+    fontWeight: '900',
+    marginTop: 1,
+  },
+  locationHint: {
+    color: '#6B7280',
+    fontSize: FontSize.xs,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  locationStatusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E9F7EF',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  locationStatusText: {
+    color: '#0F6E56',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  locationMetaRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF2F7',
+  },
+  inlineCartPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EEF3F8',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  inlineCartText: {
+    color: '#0F2F57',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+  },
+  heroCard: {
+    borderRadius: 30,
+    overflow: 'hidden',
+    marginBottom: 22,
+  },
+  heroGlowTop: {
+    position: 'absolute',
+    top: -20,
+    right: -10,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  heroGlowBottom: {
+    position: 'absolute',
+    bottom: 20,
+    right: 70,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255,142,0,0.18)',
+  },
+  heroIntroRow: {
+    zIndex: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heroKicker: {
+    color: '#9DD3FF',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  heroHeading: {
+    color: '#FFFFFF',
+    fontSize: 23,
+    lineHeight: 27,
+    fontWeight: '900',
+    maxWidth: 190,
+  },
+  heroCounterPill: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 66,
+    alignItems: 'center',
+  },
+  heroCounterValue: {
+    color: '#FFFFFF',
+    fontSize: FontSize.subtitle,
+    fontWeight: '900',
+  },
+  heroCounterLabel: {
+    color: 'rgba(255,255,255,0.74)',
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  promoSlider: {
+    marginTop: 18,
+    zIndex: 2,
+  },
+  promoSlide: {
+    borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 18,
+  },
+  promoSlideGlow: {
+    position: 'absolute',
+    right: -10,
+    top: -8,
+    width: 124,
+    height: 124,
+    borderRadius: 62,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  promoCopy: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingRight: 12,
+    justifyContent: 'center',
+  },
+  promoBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,142,0,0.2)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 8,
+  },
+  promoBadgeText: {
+    color: '#FFDCA8',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+  },
+  promoEyebrow: {
+    color: '#9DD3FF',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+    marginBottom: 6,
+  },
+  promoTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '900',
+    marginBottom: 6,
+    maxWidth: 168,
+    paddingTop: 2,
+    flexShrink: 1,
+  },
+  promoSubtitle: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12,
+    lineHeight: 18,
+    maxWidth: 152,
+    flexShrink: 1,
+  },
+  promoStatPill: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  promoStatLabel: {
+    color: '#6B7280',
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+  },
+  promoStatValue: {
+    color: '#0F2F57',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  promoImage: {
+    width: 128,
+    height: 136,
+    marginRight: 8,
+    borderRadius: 20,
+  },
+  promoImageWrap: {
+    position: 'relative',
+  },
+  heroPagination: {
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+  },
+  heroDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.32)',
+  },
+  heroDotActive: {
+    width: 28,
+    backgroundColor: '#FF8E00',
+  },
+  searchWrap: {
+    marginTop: 'auto',
+    paddingTop: 16,
+    zIndex: 2,
+  },
+  searchBar: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    minHeight: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FontSize.body,
+    fontWeight: '500',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    color: '#111827',
+    fontSize: 24,
+    fontWeight: '900',
+    lineHeight: 28,
+  },
+  sectionCaption: {
+    color: '#6B7280',
+    fontSize: FontSize.small,
+    lineHeight: 20,
+  },
+  sectionAction: {
+    color: '#FF8E00',
+    fontSize: FontSize.small,
+    fontWeight: '800',
+  },
+  categoriesRow: {
+    gap: 12,
+    paddingBottom: 24,
+  },
+  counterPill: {
+    backgroundColor: '#DDE8F4',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  counterText: {
+    color: '#0F2F57',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+  },
+});

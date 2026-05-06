@@ -16,6 +16,17 @@ public class AdminMenuController : ControllerBase
 
     // ===== CATEGORIES =====
 
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories()
+    {
+        var categories = await _db.MenuCategories
+            .AsNoTracking()
+            .OrderBy(c => c.DisplayOrder)
+            .ToListAsync();
+
+        return Ok(categories.Select(MapCategory));
+    }
+
     [HttpPost("categories")]
     public async Task<IActionResult> CreateCategory(CreateCategoryRequest req)
     {
@@ -31,7 +42,7 @@ public class AdminMenuController : ControllerBase
 
         _db.MenuCategories.Add(category);
         await _db.SaveChangesAsync();
-        return Ok(category);
+        return Ok(MapCategory(category));
     }
 
     [HttpPut("categories/{id:guid}")]
@@ -47,7 +58,7 @@ public class AdminMenuController : ControllerBase
         category.IsActive = req.IsActive;
 
         await _db.SaveChangesAsync();
-        return Ok(category);
+        return Ok(MapCategory(category));
     }
 
     [HttpDelete("categories/{id:guid}")]
@@ -62,6 +73,18 @@ public class AdminMenuController : ControllerBase
     }
 
     // ===== ITEMS =====
+
+    [HttpGet("items")]
+    public async Task<IActionResult> GetItems()
+    {
+        var items = await _db.MenuItems
+            .AsNoTracking()
+            .Include(i => i.Category)
+            .OrderBy(i => i.DisplayOrder)
+            .ToListAsync();
+
+        return Ok(items.Select(MapMenuItem));
+    }
 
     [HttpPost("items")]
     public async Task<IActionResult> CreateItem(CreateMenuItemRequest req)
@@ -84,7 +107,13 @@ public class AdminMenuController : ControllerBase
 
         _db.MenuItems.Add(item);
         await _db.SaveChangesAsync();
-        return Ok(item);
+
+        var createdItem = await _db.MenuItems
+            .AsNoTracking()
+            .Include(i => i.Category)
+            .FirstAsync(i => i.Id == item.Id);
+
+        return Ok(MapMenuItem(createdItem));
     }
 
     [HttpPut("items/{id:guid}")]
@@ -106,7 +135,13 @@ public class AdminMenuController : ControllerBase
         item.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync();
-        return Ok(item);
+
+        var updatedItem = await _db.MenuItems
+            .AsNoTracking()
+            .Include(i => i.Category)
+            .FirstAsync(i => i.Id == item.Id);
+
+        return Ok(MapMenuItem(updatedItem));
     }
 
     [HttpDelete("items/{id:guid}")]
@@ -186,7 +221,59 @@ public class AdminMenuController : ControllerBase
         await _db.SaveChangesAsync();
         return NoContent();
     }
+
+    private static AdminMenuCategoryDto MapCategory(MenuCategory category) =>
+        new(
+            category.Id,
+            category.Name,
+            category.Description,
+            category.ImageUrl,
+            category.DisplayOrder,
+            category.IsActive,
+            category.CreatedAt
+        );
+
+    private static AdminMenuItemDto MapMenuItem(MenuItem item) =>
+        new(
+            item.Id,
+            item.CategoryId,
+            item.Name,
+            item.Description,
+            item.Price,
+            item.ImageUrl,
+            item.IsAvailable,
+            item.IsFeatured,
+            item.DisplayOrder,
+            item.CreatedAt,
+            item.UpdatedAt,
+            item.Category == null ? null : MapCategory(item.Category)
+        );
 }
+
+public record AdminMenuCategoryDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    string? ImageUrl,
+    int DisplayOrder,
+    bool IsActive,
+    DateTimeOffset CreatedAt
+);
+
+public record AdminMenuItemDto(
+    Guid Id,
+    Guid? CategoryId,
+    string Name,
+    string? Description,
+    decimal Price,
+    string? ImageUrl,
+    bool IsAvailable,
+    bool IsFeatured,
+    int DisplayOrder,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    AdminMenuCategoryDto? Category
+);
 
 public record CreateCategoryRequest(
     string Name,
