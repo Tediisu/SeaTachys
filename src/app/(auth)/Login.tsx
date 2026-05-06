@@ -11,6 +11,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { goBack } from 'expo-router/build/global-state/routing';
 import { useAuth } from '@/hooks/use-auth';
 
+const INPUT_TEXT_COLOR = '#111827';
+
 export default function Login() {
   const colors = useTheme();
   const router = useRouter();
@@ -123,12 +125,15 @@ export default function Login() {
                   <TextInput
                     placeholder="Email"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="email-address"
+                    keyboardAppearance="light"
+                    selectionColor={colors.primary}
+                    cursorColor={colors.primary}
                   />
                 </View>
               </View>
@@ -140,10 +145,13 @@ export default function Login() {
                   <TextInput
                     placeholder="Password"
                     placeholderTextColor={colors.textSecondary}
-                    style={[styles.input, { color: colors.text }]}
+                    style={styles.input}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    keyboardAppearance="light"
+                    selectionColor={colors.primary}
+                    cursorColor={colors.primary}
                   />
                 </View>
               </View>
@@ -289,6 +297,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.body,
     fontWeight: '500',
+    color: INPUT_TEXT_COLOR,
   },
   metaRow: {
     marginTop: 2,

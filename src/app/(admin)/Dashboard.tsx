@@ -24,7 +24,7 @@ import {
   type AdminCategory,
   type AdminMenuItem,
 } from '@/services/admin-menu.services';
-import { homePromoService, type HomePromoSlide } from '@/services/home-promo.services';
+import { homePromoService, type HomePromoSlide, type HomeTopBanner } from '@/services/home-promo.services';
 import { imageUploadService } from '@/services/image-upload.services';
 import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
 import { useAuth } from '@/hooks/use-auth';
@@ -88,6 +88,16 @@ type HomePromoFormSlide = {
   imageUri?: string;
 };
 
+type HomeTopBannerForm = {
+  badge: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  accentText: string;
+  imageUri?: string;
+};
+
 const emptyForm = (): ProductForm => ({
   name: '',
   price: 0,
@@ -139,6 +149,16 @@ const defaultHomePromos = (): HomePromoFormSlide[] => ([
   },
 ]);
 
+const defaultHomeTopBanner = (): HomeTopBannerForm => ({
+  badge: 'Fresh Drop',
+  eyebrow: 'SEATACHYS EXPRESS',
+  title: 'Seafood cravings solved fast',
+  subtitle: 'A brighter featured banner for your best daily offers and newest dishes.',
+  ctaLabel: 'Order now',
+  accentText: 'Open today',
+  imageUri: undefined,
+});
+
 function mapMenuItem(item: AdminMenuItem): DashboardProduct {
   return {
     id: item.id,
@@ -164,6 +184,18 @@ function mapHomePromoSlide(slide: HomePromoSlide): HomePromoFormSlide {
     statLabel: slide.statLabel,
     statValue: slide.statValue,
     imageUri: slide.imageUrl ?? undefined,
+  };
+}
+
+function mapHomeTopBanner(banner: HomeTopBanner): HomeTopBannerForm {
+  return {
+    badge: banner.badge,
+    eyebrow: banner.eyebrow,
+    title: banner.title,
+    subtitle: banner.subtitle,
+    ctaLabel: banner.ctaLabel,
+    accentText: banner.accentText,
+    imageUri: banner.imageUrl ?? undefined,
   };
 }
 
@@ -343,6 +375,158 @@ function HomePromoModal({
           <View style={styles.modalFooter}>
             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Slider</Text>}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+function HomeTopBannerModal({
+  visible,
+  onClose,
+  onSave,
+  initialBanner,
+  saving,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (banner: HomeTopBannerForm) => Promise<void>;
+  initialBanner: HomeTopBannerForm | null;
+  saving: boolean;
+}) {
+  const [banner, setBanner] = useState<HomeTopBannerForm>(defaultHomeTopBanner());
+
+  useEffect(() => {
+    if (visible) {
+      setBanner(initialBanner ?? defaultHomeTopBanner());
+    }
+  }, [initialBanner, visible]);
+
+  const pickImage = async () => {
+    const ImagePicker = await import('expo-image-picker');
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow photo library access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setBanner((current) => ({ ...current, imageUri: result.assets[0].uri }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!banner.badge.trim() || !banner.title.trim() || !banner.ctaLabel.trim()) {
+      Alert.alert('Missing fields', 'Badge, title, and CTA label are required.');
+      return;
+    }
+
+    try {
+      await onSave(banner);
+      onClose();
+    } catch (err: any) {
+      Alert.alert('Unable to save banner', err.message || 'Please try again.');
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.modalSafe}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Home Top Banner</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={24} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <TouchableOpacity onPress={pickImage} style={styles.promoEditorImagePicker}>
+              {banner.imageUri ? (
+                <Image source={{ uri: banner.imageUri }} style={styles.promoEditorImagePreview} />
+              ) : (
+                <View style={styles.promoEditorImageEmpty}>
+                  <Ionicons name="image-outline" size={24} color={TEXT_SECONDARY} />
+                  <Text style={styles.imagePickerText}>Tap to add top banner image</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.fieldLabel}>Badge</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Fresh Drop"
+              placeholderTextColor={TEXT_SECONDARY}
+              value={banner.badge}
+              onChangeText={(value) => setBanner((current) => ({ ...current, badge: value }))}
+            />
+
+            <Text style={styles.fieldLabel}>Eyebrow</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="SEATACHYS EXPRESS"
+              placeholderTextColor={TEXT_SECONDARY}
+              value={banner.eyebrow}
+              onChangeText={(value) => setBanner((current) => ({ ...current, eyebrow: value }))}
+            />
+
+            <Text style={styles.fieldLabel}>Title</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Seafood cravings solved fast"
+              placeholderTextColor={TEXT_SECONDARY}
+              value={banner.title}
+              onChangeText={(value) => setBanner((current) => ({ ...current, title: value }))}
+            />
+
+            <Text style={styles.fieldLabel}>Subtitle</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="Short supporting copy"
+              placeholderTextColor={TEXT_SECONDARY}
+              multiline
+              numberOfLines={3}
+              value={banner.subtitle}
+              onChangeText={(value) => setBanner((current) => ({ ...current, subtitle: value }))}
+            />
+
+            <View style={styles.promoEditorStatRow}>
+              <View style={styles.promoEditorStatField}>
+                <Text style={styles.fieldLabel}>CTA Label</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Order now"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  value={banner.ctaLabel}
+                  onChangeText={(value) => setBanner((current) => ({ ...current, ctaLabel: value }))}
+                />
+              </View>
+              <View style={styles.promoEditorStatField}>
+                <Text style={styles.fieldLabel}>Accent Text</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Open today"
+                  placeholderTextColor={TEXT_SECONDARY}
+                  value={banner.accentText}
+                  onChangeText={(value) => setBanner((current) => ({ ...current, accentText: value }))}
+                />
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.saveBtn} onPress={handleSave} activeOpacity={0.85} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save Banner</Text>}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -791,9 +975,11 @@ export default function Dashboard() {
   const [modalVisible, setModalVisible] = useState(false);
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [promoModalVisible, setPromoModalVisible] = useState(false);
+  const [bannerModalVisible, setBannerModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<DashboardProduct | null>(null);
   const [editingCategory, setEditingCategory] = useState<AdminCategory | null>(null);
   const [homePromos, setHomePromos] = useState<HomePromoFormSlide[]>(defaultHomePromos());
+  const [homeBanner, setHomeBanner] = useState<HomeTopBannerForm>(defaultHomeTopBanner());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -810,10 +996,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (adminData.categories.length > 0 || adminData.items.length > 0 || adminData.promos.length > 0 || !adminLoading) {
+    if (adminData.categories.length > 0 || adminData.items.length > 0 || adminData.promos.length > 0 || adminData.banner || !adminLoading) {
       setCategories(adminData.categories);
       setProducts(adminData.items.map(mapMenuItem));
       setHomePromos(adminData.promos.length > 0 ? adminData.promos.map(mapHomePromoSlide) : defaultHomePromos());
+      setHomeBanner(adminData.banner ? mapHomeTopBanner(adminData.banner) : defaultHomeTopBanner());
       setLoading(false);
     }
   }, [adminData, adminLoading]);
@@ -1005,6 +1192,29 @@ export default function Dashboard() {
     }
   };
 
+  const handleSaveBanner = async (banner: HomeTopBannerForm) => {
+    setSaving(true);
+    try {
+      const payload = {
+        badge: banner.badge.trim(),
+        eyebrow: banner.eyebrow.trim(),
+        title: banner.title.trim(),
+        subtitle: banner.subtitle.trim(),
+        ctaLabel: banner.ctaLabel.trim(),
+        accentText: banner.accentText.trim(),
+        imageUrl: banner.imageUri
+          ? await imageUploadService.uploadToCloudinary(banner.imageUri, 'promo')
+          : null,
+      };
+
+      const updated = await homePromoService.updateBanner(payload);
+      setHomeBanner(mapHomeTopBanner(updated));
+      refreshAdminData().catch(() => {});
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={['top']}>
@@ -1040,6 +1250,45 @@ export default function Dashboard() {
               <StatCard label="Total Items" value={totalItems} color={TEAL} />
               <StatCard label="Available" value={available} color={TEAL_MID} />
               <StatCard label="Featured" value={featured} color={CORAL} />
+            </View>
+
+            <View style={styles.listSection}>
+              <View style={styles.categoryHeaderRow}>
+                <Text style={styles.sectionTitle}>Top Banner</Text>
+                <TouchableOpacity
+                  style={styles.smallActionBtn}
+                  onPress={() => setBannerModalVisible(true)}
+                >
+                  <Ionicons name="color-wand-outline" size={16} color="#fff" />
+                  <Text style={styles.smallActionBtnText}>Manage Banner</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.promoSummaryCard, styles.bannerSummaryCard]}>
+                <View style={styles.bannerSummaryContent}>
+                  <Text style={styles.promoSummaryBadge}>{homeBanner.badge || 'Top banner'}</Text>
+                  <Text style={styles.bannerSummaryEyebrow}>{homeBanner.eyebrow || 'HOME HEADER'}</Text>
+                  <Text style={styles.bannerSummaryTitle} numberOfLines={2}>
+                    {homeBanner.title || 'No top banner title yet'}
+                  </Text>
+                  <Text style={styles.bannerSummarySubtitle} numberOfLines={2}>
+                    {homeBanner.subtitle || 'Add a brighter top promo banner for the customer home screen.'}
+                  </Text>
+                  <View style={styles.bannerSummaryFooter}>
+                    <View style={styles.bannerCtaPill}>
+                      <Text style={styles.bannerCtaText}>{homeBanner.ctaLabel || 'Order now'}</Text>
+                    </View>
+                    <Text style={styles.bannerAccentText}>{homeBanner.accentText || 'Open today'}</Text>
+                  </View>
+                </View>
+                {homeBanner.imageUri ? (
+                  <Image source={{ uri: homeBanner.imageUri }} style={styles.bannerSummaryImage} />
+                ) : (
+                  <View style={[styles.bannerSummaryImage, styles.bannerSummaryImagePlaceholder]}>
+                    <Ionicons name="image-outline" size={24} color="#FFFFFF" />
+                  </View>
+                )}
+              </View>
             </View>
 
             <View style={styles.listSection}>
@@ -1209,6 +1458,13 @@ export default function Dashboard() {
         initialSlides={homePromos}
         saving={saving}
       />
+      <HomeTopBannerModal
+        visible={bannerModalVisible}
+        onClose={() => setBannerModalVisible(false)}
+        onSave={handleSaveBanner}
+        initialBanner={homeBanner}
+        saving={saving}
+      />
     </View>
   );
 }
@@ -1330,6 +1586,68 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: TEXT_SECONDARY,
     marginTop: 2,
+  },
+  bannerSummaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#8B1874',
+    borderColor: '#8B1874',
+  },
+  bannerSummaryContent: {
+    flex: 1,
+  },
+  bannerSummaryEyebrow: {
+    fontSize: 11,
+    color: '#F6C7EA',
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.7,
+  },
+  bannerSummaryTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  bannerSummarySubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.82)',
+    marginTop: 6,
+  },
+  bannerSummaryFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    flexWrap: 'wrap',
+  },
+  bannerCtaPill: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  bannerCtaText: {
+    color: '#8B1874',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  bannerAccentText: {
+    color: '#FCE7F5',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  bannerSummaryImage: {
+    width: 92,
+    height: 92,
+    borderRadius: 22,
+  },
+  bannerSummaryImagePlaceholder: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   stickySection: {

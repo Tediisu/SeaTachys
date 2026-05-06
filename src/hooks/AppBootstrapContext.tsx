@@ -23,12 +23,14 @@ const emptyPublicData: PublicBootstrapState = {
   categories: [],
   items: [],
   promos: [],
+  banner: null,
 };
 
 const emptyAdminData: AdminBootstrapState = {
   categories: [],
   items: [],
   promos: [],
+  banner: null,
 };
 
 const AppBootstrapContext = createContext<AppBootstrapContextValue>({

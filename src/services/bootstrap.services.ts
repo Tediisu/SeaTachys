@@ -1,18 +1,20 @@
 import { readCachedValue, writeCachedValue } from '@/utils/cache-store';
 import { adminMenuService, type AdminCategory, type AdminMenuItem } from './admin-menu.services';
-import { homePromoService, type HomePromoSlide } from './home-promo.services';
+import { homePromoService, type HomePromoSlide, type HomeTopBanner } from './home-promo.services';
 import { menuService, type MenuCategoryDto, type MenuItemDto } from './menu.services';
 
 export type PublicBootstrapData = {
   categories: MenuCategoryDto[];
   items: MenuItemDto[];
   promos: HomePromoSlide[];
+  banner: HomeTopBanner | null;
 };
 
 export type AdminBootstrapData = {
   categories: AdminCategory[];
   items: AdminMenuItem[];
   promos: HomePromoSlide[];
+  banner: HomeTopBanner | null;
 };
 
 export type CachedBootstrap<T> = {
@@ -33,30 +35,34 @@ export const bootstrapService = {
   },
 
   refreshPublicData: async (): Promise<CachedBootstrap<PublicBootstrapData>> => {
-    const [categories, items, promos] = await Promise.all([
+    const [categories, items, promos, banner] = await Promise.all([
       menuService.getCategories(),
       menuService.getItems(),
       homePromoService.getPublicPromos().catch(() => [] as HomePromoSlide[]),
+      homePromoService.getPublicBanner().catch(() => null),
     ]);
 
     return await writeCachedValue(PUBLIC_BOOTSTRAP_KEY, {
       categories,
       items,
       promos,
+      banner,
     });
   },
 
   refreshAdminData: async (): Promise<CachedBootstrap<AdminBootstrapData>> => {
-    const [categories, items, promos] = await Promise.all([
+    const [categories, items, promos, banner] = await Promise.all([
       adminMenuService.getCategories(),
       adminMenuService.getItems(),
       homePromoService.getAdminPromos().catch(() => [] as HomePromoSlide[]),
+      homePromoService.getAdminBanner().catch(() => null),
     ]);
 
     return await writeCachedValue(ADMIN_BOOTSTRAP_KEY, {
       categories,
       items,
       promos,
+      banner,
     });
   },
 };
