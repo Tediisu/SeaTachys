@@ -158,6 +158,28 @@ public class AuthController : ControllerBase
         return Ok(new { userId, email, role, fullName = user?.FullName });
     }
 
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = await _db.Users.FindAsync(Guid.Parse(userId!));
+        if (user == null || !user.IsActive) return Unauthorized();
+
+        var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword);
+        if (result == PasswordVerificationResult.Failed)
+            return BadRequest("Current password is incorrect.");
+
+        if (req.NewPassword.Length < 8)
+            return BadRequest("Password must be at least 8 characters.");
+
+        user.PasswordHash = _hasher.HashPassword(user, req.NewPassword);
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     private async Task<AuthResponseDto> IssueTokensAsync(User user)
     {
         await RevokeExpiredRefreshTokensAsync(user.Id);
@@ -248,6 +270,7 @@ public record RegisterRequest(string FullName, string Email, string Password, st
 public record LoginRequest(string Email, string Password);
 public record RefreshRequest(string RefreshToken);
 public record LogoutRequest(string? RefreshToken);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record AuthResponseDto(
     string Token,
     string AccessToken,

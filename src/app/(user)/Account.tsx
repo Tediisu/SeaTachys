@@ -1,14 +1,14 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AccountScreenSkeleton } from '@/components/ui/SkeletonScreens';
 import { FontSize } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
-import { AccountScreenSkeleton } from '@/components/ui/SkeletonScreens';
+import Feather from '@expo/vector-icons/Feather';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useRouter } from 'expo-router';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 function AccountRow({
   icon,
@@ -61,7 +61,7 @@ export default function AccountScreen() {
               <Feather name="user" size={34} color="#FFFFFF" />
             </View>
             <View style={styles.headerText}>
-              <ThemedText style={styles.name}>{user.fullname}</ThemedText>
+              <ThemedText style={styles.name}>{user.fullName}</ThemedText>
               <ThemedText style={styles.email}>{user.email}</ThemedText>
               <View style={styles.rolePill}>
                 <ThemedText style={styles.roleText}>{user.role}</ThemedText>
@@ -75,7 +75,7 @@ export default function AccountScreen() {
               icon={<Feather name="user" size={18} color="#FF8E00" />}
               label="Personal info"
               caption="Profile details and contact information"
-              onPress={() => Alert.alert('Coming soon', 'Profile editing can be added next.')}
+              onPress={() => router.push('/(user)/UserProfile')}
             />
             <AccountRow
               icon={<Feather name="map-pin" size={18} color="#0F6E56" />}

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SeaTachys.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+317b7d685febc26f2d52730b17f81f90e0a3dba8")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+97b289e3a847602bcba8e838b069227a91ee276a")]
 [assembly: System.Reflection.AssemblyProductAttribute("SeaTachys.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SeaTachys.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

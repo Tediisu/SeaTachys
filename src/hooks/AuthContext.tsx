@@ -3,7 +3,7 @@ import { authService } from '@/services/auth.services';
 
 export type AuthUser = {
   userId: string;
-  fullname: string;
+  fullName: string;
   email: string;
   role: string;
 };
