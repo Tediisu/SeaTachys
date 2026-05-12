@@ -2,6 +2,12 @@ import { apiFetch } from './api';
 
 type UploadKind = 'product' | 'category' | 'promo';
 
+type UploadAsset = {
+  uri: string;
+  mimeType?: string | null;
+  fileName?: string | null;
+};
+
 type CloudinarySignatureResponse = {
   cloudName: string;
   apiKey: string;
@@ -20,18 +26,23 @@ function inferMimeType(uri: string) {
   return 'image/jpeg';
 }
 
-function getFileName(uri: string, kind: UploadKind) {
-  const lastSegment = uri.split('/').pop()?.split('?')[0];
+function getFileName(asset: UploadAsset, kind: UploadKind) {
+  if (asset.fileName) {
+    return asset.fileName;
+  }
+
+  const lastSegment = asset.uri.split('/').pop()?.split('?')[0];
   if (lastSegment && lastSegment.includes('.')) return lastSegment;
 
-  const extension = inferMimeType(uri).split('/')[1] ?? 'jpg';
+  const extension = (asset.mimeType || inferMimeType(asset.uri)).split('/')[1] ?? 'jpg';
   return `${kind}-${Date.now()}.${extension}`;
 }
 
 export const imageUploadService = {
-  uploadToCloudinary: async (uri: string, kind: UploadKind) => {
-    if (!uri) return null;
-    if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
+  uploadToCloudinary: async (input: string | UploadAsset, kind: UploadKind) => {
+    const asset = typeof input === 'string' ? { uri: input } : input;
+    if (!asset?.uri) return null;
+    if (asset.uri.startsWith('http://') || asset.uri.startsWith('https://')) return asset.uri;
 
     const signature = (await apiFetch(
       '/api/admin/uploads/cloudinary-signature',
@@ -41,9 +52,9 @@ export const imageUploadService = {
 
     const formData = new FormData();
     formData.append('file', {
-      uri,
-      type: inferMimeType(uri),
-      name: getFileName(uri, kind),
+      uri: asset.uri,
+      type: asset.mimeType || inferMimeType(asset.uri),
+      name: getFileName(asset, kind),
     } as any);
     formData.append('api_key', signature.apiKey);
     formData.append('timestamp', String(signature.timestamp));
