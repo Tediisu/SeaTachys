@@ -64,6 +64,8 @@ type ProductForm = {
   price: number;
   description: string;
   imageUri?: string;
+  imageMimeType?: string;
+  imageFileName?: string;
   categoryId?: string | null;
   isAvailable: boolean;
   isFeatured: boolean;
@@ -73,6 +75,8 @@ type CategoryForm = {
   name: string;
   description: string;
   imageUri?: string;
+  imageMimeType?: string;
+  imageFileName?: string;
   displayOrder: number;
   isActive: boolean;
 };
@@ -86,6 +90,8 @@ type HomePromoFormSlide = {
   statLabel: string;
   statValue: string;
   imageUri?: string;
+  imageMimeType?: string;
+  imageFileName?: string;
 };
 
 type HomeTopBannerForm = {
@@ -96,6 +102,8 @@ type HomeTopBannerForm = {
   ctaLabel: string;
   accentText: string;
   imageUri?: string;
+  imageMimeType?: string;
+  imageFileName?: string;
 };
 
 const emptyForm = (): ProductForm => ({
@@ -103,6 +111,8 @@ const emptyForm = (): ProductForm => ({
   price: 0,
   description: '',
   imageUri: undefined,
+  imageMimeType: undefined,
+  imageFileName: undefined,
   categoryId: null,
   isAvailable: true,
   isFeatured: false,
@@ -112,6 +122,8 @@ const emptyCategoryForm = (): CategoryForm => ({
   name: '',
   description: '',
   imageUri: undefined,
+  imageMimeType: undefined,
+  imageFileName: undefined,
   displayOrder: 0,
   isActive: true,
 });
@@ -126,6 +138,8 @@ const defaultHomePromos = (): HomePromoFormSlide[] => ([
     statLabel: 'Savings',
     statValue: 'Up to 20%',
     imageUri: undefined,
+    imageMimeType: undefined,
+    imageFileName: undefined,
   },
   {
     position: 2,
@@ -136,6 +150,8 @@ const defaultHomePromos = (): HomePromoFormSlide[] => ([
     statLabel: 'Starts at',
     statValue: 'P199',
     imageUri: undefined,
+    imageMimeType: undefined,
+    imageFileName: undefined,
   },
   {
     position: 3,
@@ -146,6 +162,8 @@ const defaultHomePromos = (): HomePromoFormSlide[] => ([
     statLabel: 'Featured',
     statValue: '1 live',
     imageUri: undefined,
+    imageMimeType: undefined,
+    imageFileName: undefined,
   },
 ]);
 
@@ -157,6 +175,8 @@ const defaultHomeTopBanner = (): HomeTopBannerForm => ({
   ctaLabel: 'Order now',
   accentText: 'Open today',
   imageUri: undefined,
+  imageMimeType: undefined,
+  imageFileName: undefined,
 });
 
 function mapMenuItem(item: AdminMenuItem): DashboardProduct {
@@ -184,6 +204,8 @@ function mapHomePromoSlide(slide: HomePromoSlide): HomePromoFormSlide {
     statLabel: slide.statLabel,
     statValue: slide.statValue,
     imageUri: slide.imageUrl ?? undefined,
+    imageMimeType: undefined,
+    imageFileName: undefined,
   };
 }
 
@@ -196,6 +218,8 @@ function mapHomeTopBanner(banner: HomeTopBanner): HomeTopBannerForm {
     ctaLabel: banner.ctaLabel,
     accentText: banner.accentText,
     imageUri: banner.imageUrl ?? undefined,
+    imageMimeType: undefined,
+    imageFileName: undefined,
   };
 }
 
@@ -254,13 +278,17 @@ function HomePromoModal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
 
     if (!result.canceled) {
-      updateSlide(position, { imageUri: result.assets[0].uri });
+      const asset = result.assets[0];
+      updateSlide(position, {
+        imageUri: asset.uri,
+        imageMimeType: asset.mimeType ?? undefined,
+        imageFileName: asset.fileName ?? undefined,
+      });
     }
   };
 
@@ -415,13 +443,18 @@ function HomeTopBannerModal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
 
     if (!result.canceled) {
-      setBanner((current) => ({ ...current, imageUri: result.assets[0].uri }));
+      const asset = result.assets[0];
+      setBanner((current) => ({
+        ...current,
+        imageUri: asset.uri,
+        imageMimeType: asset.mimeType ?? undefined,
+        imageFileName: asset.fileName ?? undefined,
+      }));
     }
   };
 
@@ -667,13 +700,18 @@ function AddItemModal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
 
     if (!result.canceled) {
-      setForm((current) => ({ ...current, imageUri: result.assets[0].uri }));
+      const asset = result.assets[0];
+      setForm((current) => ({
+        ...current,
+        imageUri: asset.uri,
+        imageMimeType: asset.mimeType ?? undefined,
+        imageFileName: asset.fileName ?? undefined,
+      }));
     }
   };
 
@@ -859,13 +897,18 @@ function CategoryModal({
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
+      allowsEditing: false,
+      quality: 1,
     });
 
     if (!result.canceled) {
-      setForm((current) => ({ ...current, imageUri: result.assets[0].uri }));
+      const asset = result.assets[0];
+      setForm((current) => ({
+        ...current,
+        imageUri: asset.uri,
+        imageMimeType: asset.mimeType ?? undefined,
+        imageFileName: asset.fileName ?? undefined,
+      }));
     }
   };
 
@@ -1021,7 +1064,11 @@ export default function Dashboard() {
     setSaving(true);
     try {
       const imageUrl = data.imageUri
-        ? await imageUploadService.uploadToCloudinary(data.imageUri, 'product')
+        ? await imageUploadService.uploadToCloudinary({
+            uri: data.imageUri,
+            mimeType: data.imageMimeType,
+            fileName: data.imageFileName,
+          }, 'product')
         : null;
 
       const created = await adminMenuService.createItem({
@@ -1048,7 +1095,11 @@ export default function Dashboard() {
       setSaving(true);
       try {
         const imageUrl = data.imageUri
-          ? await imageUploadService.uploadToCloudinary(data.imageUri, 'product')
+          ? await imageUploadService.uploadToCloudinary({
+              uri: data.imageUri,
+              mimeType: data.imageMimeType,
+              fileName: data.imageFileName,
+            }, 'product')
           : null;
 
         await updateProduct(editingProduct, {
@@ -1118,7 +1169,11 @@ export default function Dashboard() {
     setSaving(true);
     try {
       const imageUrl = input.imageUri
-        ? await imageUploadService.uploadToCloudinary(input.imageUri, 'category')
+        ? await imageUploadService.uploadToCloudinary({
+            uri: input.imageUri,
+            mimeType: input.imageMimeType,
+            fileName: input.imageFileName,
+          }, 'category')
         : null;
 
       if (existingId) {
@@ -1179,7 +1234,11 @@ export default function Dashboard() {
           statLabel: slide.statLabel.trim(),
           statValue: slide.statValue.trim(),
           imageUrl: slide.imageUri
-            ? await imageUploadService.uploadToCloudinary(slide.imageUri, 'promo')
+            ? await imageUploadService.uploadToCloudinary({
+                uri: slide.imageUri,
+                mimeType: slide.imageMimeType,
+                fileName: slide.imageFileName,
+              }, 'promo')
             : null,
         }))
       );
@@ -1203,7 +1262,11 @@ export default function Dashboard() {
         ctaLabel: banner.ctaLabel.trim(),
         accentText: banner.accentText.trim(),
         imageUrl: banner.imageUri
-          ? await imageUploadService.uploadToCloudinary(banner.imageUri, 'promo')
+          ? await imageUploadService.uploadToCloudinary({
+              uri: banner.imageUri,
+              mimeType: banner.imageMimeType,
+              fileName: banner.imageFileName,
+            }, 'promo')
           : null,
       };
 

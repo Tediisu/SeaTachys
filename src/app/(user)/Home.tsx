@@ -1,4 +1,4 @@
-import { StyleSheet, View, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View, Text, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -97,7 +97,7 @@ export default function Home() {
       heroHeight: isCompact ? 256 : 274,
       promoHeight: isCompact ? 154 : 164,
       heroSlideWidth: contentWidth - heroPadding * 2,
-      topBannerHeight: isCompact ? 136 : 148,
+      topBannerHeight: isCompact ? 124 : 136,
       topBannerImageSize: isCompact ? 92 : 104,
     };
   }, [width]);
@@ -299,17 +299,17 @@ export default function Home() {
         <View style={styles.promoSlideGlow} />
         <View style={styles.promoCopy}>
           <View style={styles.promoBadge}>
-            <ThemedText style={styles.promoBadgeText} numberOfLines={1}>{item.badge}</ThemedText>
+            <Text style={styles.promoBadgeText} numberOfLines={1}>{item.badge}</Text>
           </View>
-          <ThemedText style={styles.promoEyebrow} numberOfLines={1}>{item.eyebrow}</ThemedText>
-          <ThemedText style={styles.promoTitle} numberOfLines={2}>{item.title}</ThemedText>
-          <ThemedText style={styles.promoSubtitle} numberOfLines={1}>
+          <Text style={styles.promoEyebrow} numberOfLines={1}>{item.eyebrow}</Text>
+          <Text style={styles.promoTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.promoSubtitle} numberOfLines={1}>
             {item.subtitle}
-          </ThemedText>
+          </Text>
 
           <View style={styles.promoStatPill}>
-            <ThemedText style={styles.promoStatLabel}>{item.statLabel}</ThemedText>
-            <ThemedText style={styles.promoStatValue}>{item.statValue}</ThemedText>
+            <Text style={styles.promoStatLabel}>{item.statLabel}</Text>
+            <Text style={styles.promoStatValue}>{item.statValue}</Text>
           </View>
         </View>
 
@@ -345,6 +345,7 @@ export default function Home() {
             keyExtractor={(item) => item.id}
             numColumns={2}
             showsVerticalScrollIndicator={false}
+            style={styles.productList}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} tintColor={colors.primary} />
             }
@@ -354,7 +355,7 @@ export default function Home() {
             }}
             contentContainerStyle={{
               paddingHorizontal: ui.pagePadding,
-              paddingTop: 8,
+              paddingTop: 0,
               paddingBottom: 20,
             }}
             renderItem={({ item }) => (
@@ -436,91 +437,92 @@ export default function Home() {
                   </View>
                 </View>
 
-                <View
-                  style={[
-                    styles.heroCard,
-                    {
-                      minHeight: ui.heroHeight,
-                      backgroundColor: colors.primary,
-                      padding: ui.heroPadding,
-                      marginTop: 8,
-                    },
-                  ]}>
-                  <View style={styles.heroGlowTop} />
-                  <View style={styles.heroGlowBottom} />
+                <View style={[styles.mainContentSurface, { marginHorizontal: -ui.pagePadding, paddingHorizontal: ui.pagePadding, marginTop: 8 }]}>
+                  <View
+                    style={[
+                      styles.heroCard,
+                      {
+                        minHeight: ui.heroHeight,
+                        backgroundColor: colors.primary,
+                        padding: ui.heroPadding,
+                      },
+                    ]}>
+                    <View style={styles.heroGlowTop} />
+                    <View style={styles.heroGlowBottom} />
 
-                  <View style={styles.heroIntroRow}>
-                    <View style={styles.heroIntroSpacer} />
-                  </View>
+                    <View style={styles.heroIntroRow}>
+                      <View style={styles.heroIntroSpacer} />
+                    </View>
 
-                  <FlatList
-                    ref={sliderRef}
-                    data={promoSlides}
-                    renderItem={renderPromoSlide}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    pagingEnabled
-                    bounces={false}
-                    showsHorizontalScrollIndicator={false}
-                    onMomentumScrollEnd={handleSliderMomentumEnd}
-                    style={styles.promoSlider}
-                  />
+                    <FlatList
+                      ref={sliderRef}
+                      data={promoSlides}
+                      renderItem={renderPromoSlide}
+                      keyExtractor={(item) => item.id}
+                      horizontal
+                      pagingEnabled
+                      bounces={false}
+                      showsHorizontalScrollIndicator={false}
+                      onMomentumScrollEnd={handleSliderMomentumEnd}
+                      style={styles.promoSlider}
+                    />
 
-                  <View style={styles.heroPagination}>
-                    {promoSlides.map((slide, index) => (
-                      <View
-                        key={slide.id}
-                        style={[
-                          styles.heroDot,
-                          index === currentSlideIndex ? styles.heroDotActive : null,
-                        ]}
-                      />
-                    ))}
-                  </View>
+                    <View style={styles.heroPagination}>
+                      {promoSlides.map((slide, index) => (
+                        <View
+                          key={slide.id}
+                          style={[
+                            styles.heroDot,
+                            index === currentSlideIndex ? styles.heroDotActive : null,
+                          ]}
+                        />
+                      ))}
+                    </View>
 
-                  <View style={styles.searchWrap}>
-                    <View style={styles.searchBar}>
-                      <FontAwesome6 name="magnifying-glass" size={16} color="#7B8797" />
-                      <TextInput
-                        placeholder="Search dishes"
-                        placeholderTextColor="#7B8797"
-                        style={styles.searchInput}
-                        value={search}
-                        onChangeText={setSearch}
-                      />
+                    <View style={styles.searchWrap}>
+                      <View style={styles.searchBar}>
+                        <FontAwesome6 name="magnifying-glass" size={16} color="#7B8797" />
+                        <TextInput
+                          placeholder="Search dishes"
+                          placeholderTextColor="#7B8797"
+                          style={styles.searchInput}
+                          value={search}
+                          onChangeText={setSearch}
+                        />
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <View style={styles.sectionHeader}>
-                  <View>
-                    <ThemedText style={styles.sectionTitle}>Browse by Category</ThemedText>
-                    <ThemedText style={styles.sectionCaption}>Choose your seafood mood</ThemedText>
+                  <View style={styles.sectionHeader}>
+                    <View>
+                      <ThemedText style={styles.sectionTitle}>Browse by Category</ThemedText>
+                      <ThemedText style={styles.sectionCaption}>Choose your seafood mood</ThemedText>
+                    </View>
+                    <Pressable onPress={() => setSelectedCategory('All')}>
+                      <ThemedText style={styles.sectionAction}>See all</ThemedText>
+                    </Pressable>
                   </View>
-                  <Pressable onPress={() => setSelectedCategory('All')}>
-                    <ThemedText style={styles.sectionAction}>See all</ThemedText>
-                  </Pressable>
-                </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
-                  {categoryButtons.map((category) => (
-                    <CategoryButton
-                      key={category.label}
-                      image={category.image}
-                      label={category.label}
-                      isSelected={selectedCategory === category.label}
-                      onPress={() => setSelectedCategory(category.label)}
-                    />
-                  ))}
-                </ScrollView>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesRow}>
+                    {categoryButtons.map((category) => (
+                      <CategoryButton
+                        key={category.label}
+                        image={category.image}
+                        label={category.label}
+                        isSelected={selectedCategory === category.label}
+                        onPress={() => setSelectedCategory(category.label)}
+                      />
+                    ))}
+                  </ScrollView>
 
-                <View style={styles.sectionHeader}>
-                  <View>
-                    <ThemedText style={styles.sectionTitle}>Popular Picks</ThemedText>
-                    <ThemedText style={styles.sectionCaption}>Live menu from the admin dashboard</ThemedText>
-                  </View>
-                  <View style={styles.counterPill}>
-                    <ThemedText style={styles.counterText}>{filteredProducts.length} items</ThemedText>
+                  <View style={styles.sectionHeader}>
+                    <View>
+                      <ThemedText style={styles.sectionTitle}>Popular Picks</ThemedText>
+                      <ThemedText style={styles.sectionCaption}>Live menu from the admin dashboard</ThemedText>
+                    </View>
+                    <View style={styles.counterPill}>
+                      <ThemedText style={styles.counterText}>{filteredProducts.length} items</ThemedText>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -540,6 +542,10 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+    backgroundColor: '#8B1874',
+  },
+  productList: {
+    backgroundColor: '#EEF3F8',
   },
   emptyState: {
     alignItems: 'center',
@@ -561,6 +567,13 @@ const styles = StyleSheet.create({
   },
   pageContent: {
     marginBottom: 18,
+  },
+  mainContentSurface: {
+    backgroundColor: '#EEF3F8',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 14,
+    paddingBottom: 4,
   },
   topPromoShell: {
     position: 'relative',
@@ -639,14 +652,14 @@ const styles = StyleSheet.create({
   },
   topPromoBannerCard: {
     zIndex: 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 24,
-    paddingLeft: 16,
-    paddingRight: 12,
-    paddingVertical: 12,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    paddingLeft: 4,
+    paddingRight: 0,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   topPromoBannerCopy: {
     flex: 1,
@@ -657,7 +670,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 4,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   topPromoBannerBadgeText: {
     color: '#8B1874',
@@ -669,7 +682,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '800',
     letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   topPromoBannerTitle: {
     color: '#FFFFFF',
@@ -681,7 +694,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.84)',
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 6,
+    marginTop: 4,
     maxWidth: 170,
   },
   topPromoBannerFooter: {
@@ -689,7 +702,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: 10,
-    marginTop: 10,
+    marginTop: 8,
   },
   topPromoBannerCta: {
     flexDirection: 'row',
@@ -697,8 +710,8 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
   },
   topPromoBannerCtaText: {
     color: '#8B1874',

@@ -8,7 +8,6 @@ using SeaTachys.Domain.Entities;
 using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Cryptography;
 using System.Security.Claims;
 using System.Text;
 
@@ -79,69 +78,8 @@ public class AuthController : ControllerBase
         var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password);
         if (result == PasswordVerificationResult.Failed) return Unauthorized("Invalid credentials.");
 
-        var response = await IssueTokensAsync(user);
-        return Ok(response);
-    }
-
-    [HttpPost("refresh")]
-    [AllowAnonymous]
-    [EnableRateLimiting("auth")]
-    public async Task<IActionResult> Refresh(RefreshRequest req)
-    {
-        if (string.IsNullOrWhiteSpace(req.RefreshToken))
-        {
-            return BadRequest("Refresh token is required.");
-        }
-
-        var hashedToken = HashRefreshToken(req.RefreshToken);
-        var existing = await _db.RefreshTokens
-            .Include(token => token.User)
-            .FirstOrDefaultAsync(token => token.Token == hashedToken);
-
-        if (existing == null || existing.RevokedAt != null || existing.ExpiresAt <= DateTimeOffset.UtcNow)
-        {
-            return Unauthorized("Refresh token is invalid or expired.");
-        }
-
-        if (existing.User == null || !existing.User.IsActive)
-        {
-            return Unauthorized("This account is inactive.");
-        }
-
-        existing.RevokedAt = DateTimeOffset.UtcNow;
-        var response = await IssueTokensAsync(existing.User);
-        await _db.SaveChangesAsync();
-
-        return Ok(response);
-    }
-
-    [HttpPost("logout")]
-    [Authorize]
-    public async Task<IActionResult> Logout(LogoutRequest req)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            return Unauthorized();
-        }
-
-        var activeTokens = await _db.RefreshTokens
-            .Where(token =>
-                token.UserId == Guid.Parse(userId) &&
-                token.RevokedAt == null)
-            .ToListAsync();
-
-        if (activeTokens.Count > 0)
-        {
-            foreach (var token in activeTokens)
-            {
-                token.RevokedAt = DateTimeOffset.UtcNow;
-            }
-
-            await _db.SaveChangesAsync();
-        }
-
-        return NoContent();
+        var token = GenerateJwt(user, DateTime.UtcNow.AddDays(7));
+        return Ok(new AuthResponseDto(token));
     }
 
     [HttpGet("me")]
@@ -180,55 +118,6 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
-    private async Task<AuthResponseDto> IssueTokensAsync(User user)
-    {
-        await RevokeExpiredRefreshTokensAsync(user.Id);
-
-        var accessTokenExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_cfg.GetValue<int?>("Auth:AccessTokenMinutes") ?? 15);
-        var refreshTokenExpiresAt = DateTimeOffset.UtcNow.AddDays(_cfg.GetValue<int?>("Auth:RefreshTokenDays") ?? 30);
-        var rawRefreshToken = GenerateRefreshToken();
-
-        _db.RefreshTokens.Add(new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            Token = HashRefreshToken(rawRefreshToken),
-            CreatedAt = DateTimeOffset.UtcNow,
-            ExpiresAt = refreshTokenExpiresAt
-        });
-
-        await _db.SaveChangesAsync();
-
-        var accessToken = GenerateJwt(user, accessTokenExpiresAt.UtcDateTime);
-        return new AuthResponseDto(
-            accessToken,
-            accessToken,
-            rawRefreshToken,
-            accessTokenExpiresAt,
-            refreshTokenExpiresAt
-        );
-    }
-
-    private async Task RevokeExpiredRefreshTokensAsync(Guid userId)
-    {
-        var expiredTokens = await _db.RefreshTokens
-            .Where(token =>
-                token.UserId == userId &&
-                token.RevokedAt == null &&
-                token.ExpiresAt <= DateTimeOffset.UtcNow)
-            .ToListAsync();
-
-        if (expiredTokens.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var token in expiredTokens)
-        {
-            token.RevokedAt = DateTimeOffset.UtcNow;
-        }
-    }
-
     private string GenerateJwt(User user, DateTime expiresAtUtc)
     {
         var claims = new[]
@@ -251,30 +140,9 @@ public class AuthController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
-
-    private static string GenerateRefreshToken()
-    {
-        var bytes = RandomNumberGenerator.GetBytes(64);
-        return Convert.ToBase64String(bytes);
-    }
-
-    private static string HashRefreshToken(string refreshToken)
-    {
-        var bytes = Encoding.UTF8.GetBytes(refreshToken);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
 }
 
 public record RegisterRequest(string FullName, string Email, string Password, string? PhoneNumber);
 public record LoginRequest(string Email, string Password);
-public record RefreshRequest(string RefreshToken);
-public record LogoutRequest(string? RefreshToken);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
-public record AuthResponseDto(
-    string Token,
-    string AccessToken,
-    string RefreshToken,
-    DateTimeOffset AccessTokenExpiresAt,
-    DateTimeOffset RefreshTokenExpiresAt
-);
+public record AuthResponseDto(string Token);
