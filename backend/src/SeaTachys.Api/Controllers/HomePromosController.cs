@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SeaTachys.Domain.Entities;
 using SeaTachys.Infrastructure.Persistence;
 
@@ -66,10 +67,12 @@ public class HomeBannerController : ControllerBase
 public class AdminHomePromosController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly DatabaseConnectionString _databaseConnectionString;
 
-    public AdminHomePromosController(AppDbContext db)
+    public AdminHomePromosController(AppDbContext db, DatabaseConnectionString databaseConnectionString)
     {
         _db = db;
+        _databaseConnectionString = databaseConnectionString;
     }
 
     [HttpGet]
@@ -107,23 +110,15 @@ public class AdminHomePromosController : ControllerBase
             return BadRequest("Badge, title, stat label, and stat value are required for every slide.");
         }
 
-        var setting = await _db.StoreSettings.FirstOrDefaultAsync(s => s.Key == HomePromoSettingsStore.Key);
+        await StoreSettingWriter.UpsertAsync(
+            _db,
+            _databaseConnectionString.Value,
+            HomePromoSettingsStore.Key,
+            JsonSerializer.Serialize(normalized, HomePromoSettingsStore.JsonOptions),
+            "Customer home promo slider content",
+            HttpContext.RequestAborted
+        );
 
-        if (setting == null)
-        {
-            setting = new StoreSetting
-            {
-                Id = Guid.NewGuid(),
-                Key = HomePromoSettingsStore.Key,
-                Description = "Customer home promo slider content"
-            };
-            _db.StoreSettings.Add(setting);
-        }
-
-        setting.Value = JsonSerializer.Serialize(normalized, HomePromoSettingsStore.JsonOptions);
-        setting.UpdatedAt = DateTimeOffset.UtcNow;
-
-        await _db.SaveChangesAsync();
         return Ok(normalized);
     }
 }
@@ -134,10 +129,12 @@ public class AdminHomePromosController : ControllerBase
 public class AdminHomeBannerController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly DatabaseConnectionString _databaseConnectionString;
 
-    public AdminHomeBannerController(AppDbContext db)
+    public AdminHomeBannerController(AppDbContext db, DatabaseConnectionString databaseConnectionString)
     {
         _db = db;
+        _databaseConnectionString = databaseConnectionString;
     }
 
     [HttpGet]
@@ -164,23 +161,15 @@ public class AdminHomeBannerController : ControllerBase
             return BadRequest("Badge, title, and CTA label are required.");
         }
 
-        var setting = await _db.StoreSettings.FirstOrDefaultAsync(s => s.Key == HomeTopBannerSettingsStore.Key);
+        await StoreSettingWriter.UpsertAsync(
+            _db,
+            _databaseConnectionString.Value,
+            HomeTopBannerSettingsStore.Key,
+            JsonSerializer.Serialize(normalized, HomePromoSettingsStore.JsonOptions),
+            "Customer home top promo banner content",
+            HttpContext.RequestAborted
+        );
 
-        if (setting == null)
-        {
-            setting = new StoreSetting
-            {
-                Id = Guid.NewGuid(),
-                Key = HomeTopBannerSettingsStore.Key,
-                Description = "Customer home top promo banner content"
-            };
-            _db.StoreSettings.Add(setting);
-        }
-
-        setting.Value = JsonSerializer.Serialize(normalized, HomePromoSettingsStore.JsonOptions);
-        setting.UpdatedAt = DateTimeOffset.UtcNow;
-
-        await _db.SaveChangesAsync();
         return Ok(normalized);
     }
 }
@@ -206,6 +195,7 @@ public record HomeTopBannerDto(
 
 public record UpdateHomePromosRequest(List<HomePromoSlideDto> Slides);
 public record UpdateHomeTopBannerRequest(HomeTopBannerDto Banner);
+public sealed record DatabaseConnectionString(string Value);
 
 internal static class HomePromoSettingsStore
 {
@@ -358,5 +348,56 @@ internal static class HomeTopBannerSettingsStore
             "Premium",
             null
         );
+    }
+}
+
+internal static class StoreSettingWriter
+{
+    internal static async Task UpsertAsync(
+        AppDbContext db,
+        string connectionString,
+        string key,
+        string value,
+        string description,
+        CancellationToken cancellationToken
+    )
+    {
+        var id = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Pooling = false,
+            Timeout = 5,
+            CommandTimeout = 8,
+            Multiplexing = false,
+            MaxAutoPrepare = 0
+        };
+
+        await using var connection = new NpgsqlConnection(connectionBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 8;
+        command.CommandText = """
+            WITH updated AS (
+                UPDATE store_settings
+                SET value = @value,
+                    description = @description,
+                    updated_at = @updated_at
+                WHERE key = @key
+                RETURNING 1
+            )
+            INSERT INTO store_settings (id, key, value, description, updated_at)
+            SELECT @id, @key, @value, @description, @updated_at
+            WHERE NOT EXISTS (SELECT 1 FROM updated)
+            """;
+        command.Parameters.AddWithValue("id", id);
+        command.Parameters.AddWithValue("key", key);
+        command.Parameters.AddWithValue("value", value);
+        command.Parameters.AddWithValue("description", description);
+        command.Parameters.AddWithValue("updated_at", now);
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

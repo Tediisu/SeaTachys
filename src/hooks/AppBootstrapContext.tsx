@@ -56,7 +56,10 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
   const hasHydratedAdminCache = useRef(false);
   const publicRequestId = useRef(0);
   const adminRequestId = useRef(0);
+  const publicRefreshInFlight = useRef<Promise<void> | null>(null);
+  const adminRefreshInFlight = useRef<Promise<void> | null>(null);
   const isAuthRoute = segments[0] === '(auth)';
+  const isAdminRoute = segments[0] === '(admin)';
 
   const hydratePublicCache = async () => {
     if (hasHydratedPublicCache.current) {
@@ -89,25 +92,36 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
   };
 
   const refreshPublicData = async () => {
+    if (publicRefreshInFlight.current) {
+      return publicRefreshInFlight.current;
+    }
+
     const requestId = ++publicRequestId.current;
     setPublicLoading(true);
-    try {
-      const refreshed = await bootstrapService.refreshPublicData();
-      if (requestId !== publicRequestId.current) {
-        return;
-      }
 
-      setPublicData({
-        ...refreshed.data,
-        updatedAt: refreshed.updatedAt,
-      });
-    } catch (error) {
-      console.log('Public bootstrap failed:', error);
-    } finally {
-      if (requestId === publicRequestId.current) {
-        setPublicLoading(false);
+    publicRefreshInFlight.current = (async () => {
+      try {
+        const refreshed = await bootstrapService.refreshPublicData();
+        if (requestId !== publicRequestId.current) {
+          return;
+        }
+
+        setPublicData({
+          ...refreshed.data,
+          updatedAt: refreshed.updatedAt,
+        });
+      } catch (error) {
+        console.log('Public bootstrap failed:', error);
+      } finally {
+        if (requestId === publicRequestId.current) {
+          setPublicLoading(false);
+        }
+
+        publicRefreshInFlight.current = null;
       }
-    }
+    })();
+
+    return publicRefreshInFlight.current;
   };
 
   const primePublicData = async (mode: 'full' | 'shell' = 'full') => {
@@ -134,29 +148,40 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
   };
 
   const refreshAdminData = async () => {
+    if (adminRefreshInFlight.current) {
+      return adminRefreshInFlight.current;
+    }
+
     const requestId = ++adminRequestId.current;
     setAdminLoading(true);
-    try {
-      const refreshed = await bootstrapService.refreshAdminData();
-      if (requestId !== adminRequestId.current) {
-        return;
-      }
 
-      setAdminData({
-        ...refreshed.data,
-        updatedAt: refreshed.updatedAt,
-      });
-    } catch (error) {
-      console.log('Admin bootstrap failed:', error);
-    } finally {
-      if (requestId === adminRequestId.current) {
-        setAdminLoading(false);
+    adminRefreshInFlight.current = (async () => {
+      try {
+        const refreshed = await bootstrapService.refreshAdminData();
+        if (requestId !== adminRequestId.current) {
+          return;
+        }
+
+        setAdminData({
+          ...refreshed.data,
+          updatedAt: refreshed.updatedAt,
+        });
+      } catch (error) {
+        console.log('Admin bootstrap failed:', error);
+      } finally {
+        if (requestId === adminRequestId.current) {
+          setAdminLoading(false);
+        }
+
+        adminRefreshInFlight.current = null;
       }
-    }
+    })();
+
+    return adminRefreshInFlight.current;
   };
 
   useEffect(() => {
-    if (isAuthRoute) {
+    if (isAuthRoute || isAdminRoute) {
       setPublicLoading(false);
       return;
     }
@@ -172,7 +197,7 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
     };
 
     bootstrap();
-  }, [isAuthRoute]);
+  }, [isAuthRoute, isAdminRoute]);
 
   useEffect(() => {
     if (isAuthRoute || user?.role !== 'admin') {

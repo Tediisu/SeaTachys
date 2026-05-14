@@ -1,5 +1,8 @@
 import { apiFetch } from './api';
 
+const ADMIN_READ_TIMEOUT_MS = 20000;
+const ADMIN_WRITE_TIMEOUT_MS = 30000;
+
 export type AdminCategory = {
   id: string;
   name: string;
@@ -45,7 +48,7 @@ export type AdminCategoryInput = {
 
 export const adminMenuService = {
   getCategories: async () => {
-    return await apiFetch('/api/admin/menu/categories');
+    return await apiFetch('/api/admin/menu/categories', 'GET', undefined, true, ADMIN_READ_TIMEOUT_MS);
   },
 
   createCategory: async (input: AdminCategoryInput) => {
@@ -55,7 +58,7 @@ export const adminMenuService = {
       imageUrl: input.imageUrl ?? null,
       displayOrder: input.displayOrder ?? 0,
       isActive: input.isActive ?? true,
-    });
+    }, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 
   updateCategory: async (id: string, input: AdminCategoryInput) => {
@@ -65,15 +68,15 @@ export const adminMenuService = {
       imageUrl: input.imageUrl ?? null,
       displayOrder: input.displayOrder ?? 0,
       isActive: input.isActive ?? true,
-    });
+    }, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 
   deleteCategory: async (id: string) => {
-    return await apiFetch(`/api/admin/menu/categories/${id}`, 'DELETE');
+    return await apiFetch(`/api/admin/menu/categories/${id}`, 'DELETE', undefined, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 
   getItems: async () => {
-    return await apiFetch('/api/admin/menu/items');
+    return await apiFetch('/api/admin/menu/items', 'GET', undefined, true, ADMIN_READ_TIMEOUT_MS);
   },
 
   createItem: async (input: CreateAdminMenuItemInput) => {
@@ -86,7 +89,7 @@ export const adminMenuService = {
       isAvailable: input.isAvailable,
       isFeatured: input.isFeatured,
       displayOrder: input.displayOrder ?? 0,
-    });
+    }, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 
   updateItem: async (id: string, input: UpdateAdminMenuItemInput) => {
@@ -99,10 +102,10 @@ export const adminMenuService = {
       isAvailable: input.isAvailable,
       isFeatured: input.isFeatured,
       displayOrder: input.displayOrder ?? 0,
-    });
+    }, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 
   deleteItem: async (id: string) => {
-    return await apiFetch(`/api/admin/menu/items/${id}`, 'DELETE');
+    return await apiFetch(`/api/admin/menu/items/${id}`, 'DELETE', undefined, true, ADMIN_WRITE_TIMEOUT_MS);
   },
 };

@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 
-const BANNER_TIMEOUT_MS = 45000;
+const BANNER_READ_TIMEOUT_MS = 45000;
+const BANNER_WRITE_TIMEOUT_MS = 20000;
 const BANNER_RETRY_ATTEMPTS = 3;
 
 const isTimeoutError = (error: unknown) =>
@@ -52,7 +53,7 @@ export const homePromoService = {
 
   getPublicBanner: async () => {
     return await withTimeoutRetry(
-      async () => await apiFetch('/api/home/banner', 'GET', undefined, false, BANNER_TIMEOUT_MS) as HomeTopBanner
+      async () => await apiFetch('/api/home/banner', 'GET', undefined, false, BANNER_READ_TIMEOUT_MS) as HomeTopBanner
     );
   },
 
@@ -62,7 +63,7 @@ export const homePromoService = {
 
   getAdminBanner: async () => {
     return await withTimeoutRetry(
-      async () => await apiFetch('/api/admin/home-banner', 'GET', undefined, true, BANNER_TIMEOUT_MS) as HomeTopBanner
+      async () => await apiFetch('/api/admin/home-banner', 'GET', undefined, true, BANNER_READ_TIMEOUT_MS) as HomeTopBanner
     );
   },
 
@@ -71,8 +72,6 @@ export const homePromoService = {
   },
 
   updateBanner: async (banner: HomeTopBanner) => {
-    return await withTimeoutRetry(
-      async () => await apiFetch('/api/admin/home-banner', 'PUT', { banner }, true, BANNER_TIMEOUT_MS) as HomeTopBanner
-    );
+    return await apiFetch('/api/admin/home-banner', 'PUT', { banner }, true, BANNER_WRITE_TIMEOUT_MS) as HomeTopBanner;
   },
 };
