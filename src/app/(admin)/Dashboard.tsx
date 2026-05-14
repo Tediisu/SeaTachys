@@ -1058,7 +1058,6 @@ export default function Dashboard() {
 
       const category = categories.find((item) => item.id === created.categoryId) ?? null;
       setProducts((prev) => [mapMenuItem({ ...created, category }), ...prev]);
-      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -1110,7 +1109,6 @@ export default function Dashboard() {
 
     const category = categories.find((entry) => entry.id === updated.categoryId) ?? null;
     setProducts((prev) => prev.map((product) => (product.id === item.id ? mapMenuItem({ ...updated, category }) : product)));
-    refreshAdminData().catch(() => {});
   };
 
   const toggleAvailable = async (item: DashboardProduct) => {
@@ -1244,7 +1242,6 @@ export default function Dashboard() {
 
       const updated = await homePromoService.updateBanner(payload);
       setHomeBanner(mapHomeTopBanner(updated));
-      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -1280,7 +1277,7 @@ export default function Dashboard() {
         {loading ? (
           <DashboardSkeleton />
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[3]}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[4]}>
             <View style={styles.statsRow}>
               <StatCard label="Total Items" value={totalItems} color={TEAL} />
               <StatCard label="Available" value={available} color={TEAL_MID} />
@@ -1686,6 +1683,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderBottomWidth: 1,
     borderBottomColor: GRAY_BORDER,
+    zIndex: 5,
+    elevation: 5,
   },
   searchWrap: {
     flexDirection: 'row',

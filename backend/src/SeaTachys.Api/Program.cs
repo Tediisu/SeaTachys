@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.RateLimiting;
 using Npgsql;
 using Npgsql.NameTranslation;
+using SeaTachys.Api.Controllers;
 using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
 using System.Text;
@@ -35,13 +36,15 @@ if (string.IsNullOrWhiteSpace(jwtKey))
         "Missing Jwt__Key. Set it in the backend .env file or environment variables.");
 }
 
+builder.Services.AddSingleton(new DatabaseConnectionString(connString));
+
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connString, npgsql =>
         npgsql.EnableRetryOnFailure(
-                  maxRetryCount: 5,
-                  maxRetryDelay: TimeSpan.FromSeconds(10),
+                  maxRetryCount: 1,
+                  maxRetryDelay: TimeSpan.FromSeconds(2),
                   errorCodesToAdd: null)
-              .CommandTimeout(120)
+              .CommandTimeout(12)
               .MapEnum<UserRole>("user_role")
               .MapEnum<OrderStatus>("order_status")
               .MapEnum<PaymentMethod>("payment_method")
@@ -157,6 +160,10 @@ static string NormalizeConnectionString(string rawConnectionString)
     {
         builder.SslMode = SslMode.Require;
     }
+
+    builder.Multiplexing = false;
+    builder.MaxAutoPrepare = 0;
+    builder.Pooling = true;
 
     return builder.ConnectionString;
 }

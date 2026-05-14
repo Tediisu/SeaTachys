@@ -16,57 +16,21 @@ export type LoginResponse = {
   role: string;
 };
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const authService = {
   login: async (email: string, password: string) => {
-    let lastError: unknown = null;
+    const data = await apiFetch('/api/auth/login', 'POST', {
+      email: email.trim().toLowerCase(),
+      password,
+    }, false, 30000) as LoginResponse;
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const data = await apiFetch('/api/auth/login', 'POST', {
-          email: email.trim().toLowerCase(),
-          password,
-        }, false, 15000) as LoginResponse;
-
-        await storage.saveToken(data.token);
-        return data;
-      } catch (error: any) {
-        lastError = error;
-        const isTimeout = typeof error?.message === 'string' && error.message.includes('timed out');
-
-        if (!isTimeout || attempt === 2) {
-          throw error;
-        }
-
-        await delay(800 * (attempt + 1));
-      }
-    }
-
-    throw lastError ?? new Error('Unable to log in.');
+    await storage.saveToken(data.token);
+    return data;
   },
 
   lookupEmail: async (email: string) => {
-    let lastError: unknown = null;
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        return await apiFetch('/api/auth/lookup-email', 'POST', {
-          email: email.trim().toLowerCase(),
-        }, false, 12000) as EmailLookupResponse;
-      } catch (error: any) {
-        lastError = error;
-        const isTimeout = typeof error?.message === 'string' && error.message.includes('timed out');
-
-        if (!isTimeout || attempt === 2) {
-          throw error;
-        }
-
-        await delay(600 * (attempt + 1));
-      }
-    }
-
-    throw lastError ?? new Error('Unable to look up account.');
+    return await apiFetch('/api/auth/lookup-email', 'POST', {
+      email: email.trim().toLowerCase(),
+    }, false, 30000) as EmailLookupResponse;
   },
 
   register: async (input: {

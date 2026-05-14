@@ -94,12 +94,35 @@ export const bootstrapService = {
   },
 
   refreshAdminData: async (): Promise<CachedBootstrap<AdminBootstrapData>> => {
-    const [categories, items, promos, banner] = await Promise.all([
-      adminMenuService.getCategories(),
-      adminMenuService.getItems(),
-      homePromoService.getAdminPromos().catch(() => [] as HomePromoSlide[]),
-      homePromoService.getAdminBanner().catch(() => null),
-    ]);
+    const cached = await readCachedValue<AdminBootstrapData>(ADMIN_BOOTSTRAP_KEY);
+
+    const categories = await adminMenuService
+      .getCategories()
+      .catch((error) => {
+        console.log('Admin categories refresh failed:', error);
+        return cached?.data.categories ?? [];
+      });
+
+    const items = await adminMenuService
+      .getItems()
+      .catch((error) => {
+        console.log('Admin items refresh failed:', error);
+        return cached?.data.items ?? [];
+      });
+
+    const promos = await homePromoService
+      .getAdminPromos()
+      .catch((error) => {
+        console.log('Admin promos refresh failed:', error);
+        return cached?.data.promos ?? [] as HomePromoSlide[];
+      });
+
+    const banner = await homePromoService
+      .getAdminBanner()
+      .catch((error) => {
+        console.log('Admin banner refresh failed:', error);
+        return cached?.data.banner ?? null;
+      });
 
     return await writeCachedValue(ADMIN_BOOTSTRAP_KEY, {
       categories,

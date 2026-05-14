@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using SeaTachys.Domain.Entities;
 using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
@@ -19,12 +20,14 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IConfiguration _cfg;
+    private readonly DatabaseConnectionString _databaseConnectionString;
     private readonly PasswordHasher<User> _hasher = new();
 
-    public AuthController(AppDbContext db, IConfiguration cfg)
+    public AuthController(AppDbContext db, IConfiguration cfg, DatabaseConnectionString databaseConnectionString)
     {
         _db = db;
         _cfg = cfg;
+        _databaseConnectionString = databaseConnectionString;
     }
 
     [HttpPost("register")]
@@ -71,7 +74,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login(LoginRequest req)
     {
         var normalizedEmail = req.Email.Trim().ToLowerInvariant();
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        var user = await AuthUserReader.FindByEmailAsync(_databaseConnectionString.Value, normalizedEmail, HttpContext.RequestAborted);
         if (user == null) return Unauthorized("Invalid credentials.");
         if (!user.IsActive) return Unauthorized("This account is inactive.");
 
@@ -99,9 +102,7 @@ public class AuthController : ControllerBase
             return BadRequest("Email is required.");
         }
 
-        var user = await _db.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+        var user = await AuthUserReader.FindByEmailAsync(_databaseConnectionString.Value, normalizedEmail, HttpContext.RequestAborted);
 
         if (user == null)
         {
@@ -191,3 +192,51 @@ public record EmailLookupRequest(string Email);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record EmailLookupResponseDto(Guid UserId, string FullName, string Email, string Role);
 public record AuthResponseDto(string Token, Guid UserId, string FullName, string Email, string Role);
+
+internal static class AuthUserReader
+{
+    internal static async Task<User?> FindByEmailAsync(
+        string connectionString,
+        string email,
+        CancellationToken cancellationToken
+    )
+    {
+        var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Pooling = false,
+            Timeout = 5,
+            CommandTimeout = 8,
+            Multiplexing = false,
+            MaxAutoPrepare = 0
+        };
+
+        await using var connection = new NpgsqlConnection(connectionBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 8;
+        command.CommandText = """
+            SELECT id, full_name, email, password_hash, role::text, is_active
+            FROM users
+            WHERE email = @email
+            LIMIT 1
+            """;
+        command.Parameters.AddWithValue("email", email);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new User
+        {
+            Id = reader.GetGuid(0),
+            FullName = reader.GetString(1),
+            Email = reader.GetString(2),
+            PasswordHash = reader.GetString(3),
+            Role = Enum.Parse<UserRole>(reader.GetString(4), ignoreCase: true),
+            IsActive = reader.GetBoolean(5)
+        };
+    }
+}

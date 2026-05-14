@@ -108,12 +108,7 @@ public class AdminMenuController : ControllerBase
         _db.MenuItems.Add(item);
         await _db.SaveChangesAsync();
 
-        var createdItem = await _db.MenuItems
-            .AsNoTracking()
-            .Include(i => i.Category)
-            .FirstAsync(i => i.Id == item.Id);
-
-        return Ok(MapMenuItem(createdItem));
+        return Ok(MapMenuItem(item));
     }
 
     [HttpPut("items/{id:guid}")]
@@ -136,12 +131,7 @@ public class AdminMenuController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        var updatedItem = await _db.MenuItems
-            .AsNoTracking()
-            .Include(i => i.Category)
-            .FirstAsync(i => i.Id == item.Id);
-
-        return Ok(MapMenuItem(updatedItem));
+        return Ok(MapMenuItem(item));
     }
 
     [HttpDelete("items/{id:guid}")]
