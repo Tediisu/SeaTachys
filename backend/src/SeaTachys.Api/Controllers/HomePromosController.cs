@@ -198,9 +198,7 @@ public record HomePromoSlideDto(
 
 public record HomeTopBannerDto(
     string Badge,
-    string Eyebrow,
     string Title,
-    string Subtitle,
     string CtaLabel,
     string AccentText,
     string? ImageUrl
@@ -345,9 +343,7 @@ internal static class HomeTopBannerSettingsStore
     internal static HomeTopBannerDto Normalize(HomeTopBannerDto banner) =>
         new(
             banner.Badge.Trim(),
-            banner.Eyebrow.Trim(),
             banner.Title.Trim(),
-            banner.Subtitle.Trim(),
             banner.CtaLabel.Trim(),
             banner.AccentText.Trim(),
             string.IsNullOrWhiteSpace(banner.ImageUrl) ? null : banner.ImageUrl.Trim()
@@ -355,27 +351,12 @@ internal static class HomeTopBannerSettingsStore
 
     internal static async Task<HomeTopBannerDto> BuildFallbackAsync(AppDbContext db)
     {
-        var featured = await db.MenuItems
-            .AsNoTracking()
-            .Where(item => item.IsAvailable)
-            .OrderByDescending(item => item.IsFeatured)
-            .ThenBy(item => item.DisplayOrder)
-            .Select(item => new
-            {
-                item.Name,
-                item.Description,
-                item.ImageUrl
-            })
-            .FirstOrDefaultAsync();
-
         return new HomeTopBannerDto(
-            "Fresh Drop",
-            "SEATACHYS EXPRESS",
-            featured?.Name ?? "Seafood cravings solved fast",
-            featured?.Description ?? "Order your campus favorites with a brighter new home banner.",
-            "Order now",
-            "Open today",
-            featured?.ImageUrl
+            "PROMO",
+            "30% off 12-month plan",
+            "Subscribe now!",
+            "Premium",
+            null
         );
     }
 }

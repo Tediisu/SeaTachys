@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { Animated, StyleSheet, View, Text, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -53,9 +53,7 @@ type PromoSlide = {
 
 type TopBanner = {
   badge: string;
-  eyebrow: string;
   title: string;
-  subtitle: string;
   ctaLabel: string;
   accentText: string;
   image: ImageSourcePropType | string | null;
@@ -69,6 +67,7 @@ export default function Home() {
   const { itemCount } = useCart();
   const { publicData, publicLoading, refreshPublicData } = useAppBootstrap();
   const sliderRef = useRef<FlatList<PromoSlide>>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
@@ -97,10 +96,143 @@ export default function Home() {
       heroHeight: isCompact ? 256 : 274,
       promoHeight: isCompact ? 154 : 164,
       heroSlideWidth: contentWidth - heroPadding * 2,
-      topBannerHeight: isCompact ? 124 : 136,
+      topBannerHeight: isCompact ? 184 : 198,
+      topBannerCollapsedHeight: isCompact ? 60 : 64,
+      topPromoShellExpandedHeight: isCompact ? 234 : 248,
+      topPromoShellCollapsedHeight: isCompact ? 72 : 78,
       topBannerImageSize: isCompact ? 92 : 104,
+      topBannerTitleSize: isCompact ? 20 : 22,
+      topBannerTitleLineHeight: isCompact ? 22 : 24,
+      topBannerCollapsedTitleSize: isCompact ? 15 : 16,
+      topBannerCollapsedTitleLineHeight: isCompact ? 18 : 19,
     };
   }, [width]);
+
+  const bannerCollapseDistance = 130;
+  const bannerCollapseProgress = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const topBannerCardHeight = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [ui.topBannerHeight, ui.topBannerCollapsedHeight],
+    extrapolate: 'clamp',
+  });
+  const topPromoShellHeight = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [ui.topPromoShellExpandedHeight, ui.topPromoShellCollapsedHeight],
+    extrapolate: 'clamp',
+  });
+  const topPromoListGap = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance * 0.55, bannerCollapseDistance],
+    outputRange: [12, 24, 0],
+    extrapolate: 'clamp',
+  });
+  const topPromoCollapsePush = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance * 0.55, bannerCollapseDistance],
+    outputRange: [0, 56, 0],
+    extrapolate: 'clamp',
+  });
+  const topPromoSpacerHeight = Animated.add(
+    Animated.add(topPromoShellHeight, topPromoListGap),
+    topPromoCollapsePush
+  );
+  const topBannerCardTranslateY = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, -10],
+    extrapolate: 'clamp',
+  });
+  const topBannerShellPaddingBottom = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [10, 2],
+    extrapolate: 'clamp',
+  });
+  const topBannerShellPaddingTop = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [2, 12],
+    extrapolate: 'clamp',
+  });
+  const topBannerShellMarginBottom = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerContentTranslateY = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, -6],
+    extrapolate: 'clamp',
+  });
+  const topPromoHeaderOpacity = scrollY.interpolate({
+    inputRange: [0, 35, 90],
+    outputRange: [1, 0.35, 0],
+    extrapolate: 'clamp',
+  });
+  const topPromoHeaderHeight = scrollY.interpolate({
+    inputRange: [0, 70, bannerCollapseDistance],
+    outputRange: [54, 22, 0],
+    extrapolate: 'clamp',
+  });
+  const topPromoHeaderMarginBottom = scrollY.interpolate({
+    inputRange: [0, 70, bannerCollapseDistance],
+    outputRange: [12, 6, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerBadgeOpacity = scrollY.interpolate({
+    inputRange: [0, 35, 90],
+    outputRange: [1, 0.35, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerTitleOpacity = scrollY.interpolate({
+    inputRange: [0, 45, 95],
+    outputRange: [1, 0.35, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerLeadHeight = scrollY.interpolate({
+    inputRange: [0, 70, bannerCollapseDistance],
+    outputRange: [112, 48, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerFooterOpacity = scrollY.interpolate({
+    inputRange: [0, 60, bannerCollapseDistance],
+    outputRange: [1, 1, 1],
+    extrapolate: 'clamp',
+  });
+  const topBannerFooterMarginTop = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [14, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerFooterTranslateY = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, -2],
+    extrapolate: 'clamp',
+  });
+  const topBannerImageOpacity = scrollY.interpolate({
+    inputRange: [0, 45, bannerCollapseDistance],
+    outputRange: [1, 0.5, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerImageTranslateY = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [0, -24],
+    extrapolate: 'clamp',
+  });
+  const topBannerImageScale = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [1, 0.82],
+    extrapolate: 'clamp',
+  });
+  const topBannerVisualLaneWidth = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [ui.topBannerImageSize + 20, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerImageWidth = scrollY.interpolate({
+    inputRange: [0, bannerCollapseDistance],
+    outputRange: [ui.topBannerImageSize, 0],
+    extrapolate: 'clamp',
+  });
 
   useEffect(() => {
     const categoryById = new Map<string, MenuCategoryDto>(
@@ -137,7 +269,16 @@ export default function Home() {
     );
   }, [publicData]);
 
-  const loading = publicLoading && items.length === 0 && categories.length === 0;
+  const hasShellContent =
+    promoOverrides.length > 0 ||
+    !!publicData.banner;
+
+  const loading =
+    publicLoading &&
+    !publicData.updatedAt &&
+    items.length === 0 &&
+    categories.length === 0 &&
+    !hasShellContent;
 
   const loadMenu = async (showRefresh = false) => {
     if (!showRefresh) {
@@ -176,7 +317,7 @@ export default function Home() {
     });
   }, [items, search, selectedCategory]);
 
-  const firstName = user?.fullname?.split(' ')[0] ?? 'Seafood Lover';
+  const firstName = user?.fullName?.split(' ')[0] ?? 'Seafood Lover';
   const featuredItems = useMemo(
     () =>
       [...items]
@@ -239,31 +380,26 @@ export default function Home() {
   );
 
   const topBanner = useMemo<TopBanner>(() => {
-    const spotlightItem = featuredItems[0] ?? items[0] ?? null;
     const fallbackImage = require('@/assets/images/crispy-shrimp.jpg');
 
     if (publicData.banner) {
       return {
         badge: publicData.banner.badge,
-        eyebrow: publicData.banner.eyebrow,
         title: publicData.banner.title,
-        subtitle: publicData.banner.subtitle,
         ctaLabel: publicData.banner.ctaLabel,
         accentText: publicData.banner.accentText,
-        image: publicData.banner.imageUrl ?? spotlightItem?.image ?? fallbackImage,
+        image: publicData.banner.imageUrl ?? fallbackImage,
       };
     }
 
     return {
-      badge: 'Fresh Drop',
-      eyebrow: 'SEATACHYS EXPRESS',
-      title: spotlightItem ? `Try ${spotlightItem.name} today` : 'Seafood cravings solved fast',
-      subtitle: spotlightItem?.description ?? 'Campus favorites, bright promos, and quick seafood cravings in one tap.',
-      ctaLabel: 'Order now',
-      accentText: itemCount > 0 ? `${itemCount} in cart` : 'Open today',
-      image: spotlightItem?.image ?? fallbackImage,
+      badge: 'PROMO',
+      title: '30% off 12-month plan',
+      ctaLabel: 'Subscribe now!',
+      accentText: 'Premium',
+      image: fallbackImage,
     };
-  }, [featuredItems, itemCount, items, publicData.banner]);
+  }, [publicData.banner]);
 
   useEffect(() => {
     setCurrentSlideIndex((prev) => Math.min(prev, Math.max(promoSlides.length - 1, 0)));
@@ -340,104 +476,211 @@ export default function Home() {
         {loading ? (
           <HomeScreenSkeleton />
         ) : (
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            showsVerticalScrollIndicator={false}
-            style={styles.productList}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} tintColor={colors.primary} />
-            }
-            columnWrapperStyle={{
-              gap: ui.gap,
-              marginBottom: ui.gap,
-            }}
-            contentContainerStyle={{
-              paddingHorizontal: ui.pagePadding,
-              paddingTop: 0,
-              paddingBottom: 20,
-            }}
-            renderItem={({ item }) => (
-              <View style={{ width: ui.cardWidth }}>
-                <ProductCard
-                  item={item}
-                  compact
-                  onPress={() => router.push(`/(user)/product/${item.id}`)}
-                />
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <ThemedText style={styles.emptyTitle}>No dishes yet</ThemedText>
-                <ThemedText style={styles.emptyText}>
-                  Once the admin adds menu items, they will appear here automatically.
-                </ThemedText>
-              </View>
-            }
-            ListHeaderComponent={
-              <View style={[styles.pageContent, { width: ui.contentWidth, alignSelf: 'center' }]}>
-                <View
+          <View style={styles.screenBody}>
+            <Animated.View
+              pointerEvents="box-none"
+              style={[
+                styles.topPromoStickyWrap,
+              ]}>
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.topPromoSeparationGap,
+                  {
+                    top: topPromoShellHeight,
+                    height: topPromoListGap,
+                  },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.topPromoShell,
+                  {
+                    paddingTop: topBannerShellPaddingTop,
+                    paddingHorizontal: ui.pagePadding + 4,
+                    paddingBottom: topBannerShellPaddingBottom,
+                    marginBottom: topBannerShellMarginBottom,
+                    height: topPromoShellHeight,
+                  },
+                ]}>
+                <View style={styles.topPromoGlowLarge} />
+                <View style={styles.topPromoGlowSmall} />
+
+                <Animated.View
                   style={[
-                    styles.topPromoShell,
+                    styles.topPromoHeaderRow,
                     {
-                      marginHorizontal: -ui.pagePadding,
-                      paddingHorizontal: ui.pagePadding + 4,
-                      paddingTop: 10,
+                      opacity: topPromoHeaderOpacity,
+                      height: topPromoHeaderHeight,
+                      marginBottom: topPromoHeaderMarginBottom,
                     },
                   ]}>
-                  <View style={styles.topPromoGlowLarge} />
-                  <View style={styles.topPromoGlowSmall} />
-
-                  <View style={styles.topPromoHeaderRow}>
-                    <View style={styles.topAddressRow}>
-                      <View style={styles.topAddressIconWrap}>
-                        <Ionicons name="location-outline" size={18} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.topAddressTextWrap}>
-                        <ThemedText style={styles.topAddressTitle} numberOfLines={1}>Rawr Bldg</ThemedText>
-                        <ThemedText style={styles.topAddressSubtitle} numberOfLines={1}>Delivered near your campus stop</ThemedText>
-                      </View>
+                  <View style={styles.topAddressRow}>
+                    <View style={styles.topAddressIconWrap}>
+                      <Ionicons name="location-outline" size={18} color="#FFFFFF" />
                     </View>
-                    <Pressable style={styles.topPromoActionIcon} onPress={() => router.push('/(user)/Account')}>
-                      <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
-                    </Pressable>
+                    <View style={styles.topAddressTextWrap}>
+                      <ThemedText style={styles.topAddressTitle} numberOfLines={1}>Rawr Bldg</ThemedText>
+                      <ThemedText style={styles.topAddressSubtitle} numberOfLines={1}>Delivered near your campus stop</ThemedText>
+                    </View>
                   </View>
+                  <Pressable style={styles.topPromoActionIcon} onPress={() => router.push('/(user)/Account')}>
+                    <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
+                  </Pressable>
+                </Animated.View>
 
-                  <View style={[styles.topPromoBannerCard, { minHeight: ui.topBannerHeight }]}>
-                    <View style={styles.topPromoBannerCopy}>
-                      <View style={styles.topPromoBannerBadge}>
-                        <ThemedText style={styles.topPromoBannerBadgeText} numberOfLines={1}>{topBanner.badge}</ThemedText>
-                      </View>
-                      <ThemedText style={styles.topPromoBannerEyebrow} numberOfLines={1}>{topBanner.eyebrow}</ThemedText>
-                      <ThemedText style={styles.topPromoBannerTitle} numberOfLines={3}>{topBanner.title}</ThemedText>
-                      <ThemedText style={styles.topPromoBannerSubtitle} numberOfLines={2}>{topBanner.subtitle}</ThemedText>
+                <Animated.View
+                  style={[
+                    styles.topPromoBannerCard,
+                    {
+                      height: topBannerCardHeight,
+                      transform: [{ translateY: topBannerCardTranslateY }],
+                    },
+                  ]}>
+                  <Animated.View
+                    style={[
+                      styles.topPromoBannerBody,
+                      {
+                        transform: [{ translateY: topBannerContentTranslateY }],
+                      },
+                    ]}>
+                    <Animated.View
+                      style={[
+                        styles.topPromoBannerCopy,
+                      ]}>
+                      <Animated.View
+                        style={[
+                          styles.topPromoBannerLead,
+                          {
+                            opacity: topBannerTitleOpacity,
+                            height: topBannerLeadHeight,
+                          },
+                        ]}>
+                        <Animated.View style={{ opacity: topBannerBadgeOpacity }}>
+                          <View style={styles.topPromoBannerBadge}>
+                            <ThemedText style={styles.topPromoBannerBadgeText} numberOfLines={1}>{topBanner.badge}</ThemedText>
+                          </View>
+                        </Animated.View>
+                        <Animated.Text
+                          numberOfLines={2}
+                          style={[
+                            styles.topPromoBannerTitle,
+                            {
+                              fontSize: scrollY.interpolate({
+                                inputRange: [0, bannerCollapseDistance],
+                                outputRange: [ui.topBannerTitleSize, ui.topBannerCollapsedTitleSize],
+                                extrapolate: 'clamp',
+                              }),
+                              lineHeight: scrollY.interpolate({
+                                inputRange: [0, bannerCollapseDistance],
+                                outputRange: [ui.topBannerTitleLineHeight, ui.topBannerCollapsedTitleLineHeight],
+                                extrapolate: 'clamp',
+                              }),
+                            },
+                          ]}>
+                          {topBanner.title}
+                        </Animated.Text>
+                      </Animated.View>
 
-                      <View style={styles.topPromoBannerFooter}>
+                      <Animated.View
+                        style={[
+                          styles.topPromoBannerFooter,
+                          {
+                            opacity: topBannerFooterOpacity,
+                            marginTop: topBannerFooterMarginTop,
+                            transform: [{ translateY: topBannerFooterTranslateY }],
+                          },
+                        ]}>
                         <View style={styles.topPromoBannerCta}>
                           <ThemedText style={styles.topPromoBannerCtaText}>{topBanner.ctaLabel}</ThemedText>
                           <Ionicons name="arrow-forward-circle" size={18} color="#8B1874" />
                         </View>
                         <ThemedText style={styles.topPromoBannerAccent}>{topBanner.accentText}</ThemedText>
-                      </View>
-                    </View>
+                      </Animated.View>
+                    </Animated.View>
 
-                    <View style={[styles.topPromoBannerImageWrap, { width: ui.topBannerImageSize, height: ui.topBannerImageSize }]}>
-                      <Image
-                        source={topBannerImageSource}
-                        style={styles.topPromoBannerImage}
-                        contentFit="cover"
-                        transition={120}
-                        cachePolicy="memory-disk"
-                        onLoadStart={() => setTopBannerImageReady(false)}
-                        onLoadEnd={() => setTopBannerImageReady(true)}
-                      />
-                      {!topBannerImageReady ? <Skeleton style={styles.topPromoBannerImage} radius={24} /> : null}
-                    </View>
-                  </View>
+                    <Animated.View
+                      style={[
+                        styles.topPromoBannerVisualLane,
+                        {
+                          width: topBannerVisualLaneWidth,
+                          opacity: topBannerImageOpacity,
+                        },
+                      ]}>
+                      <Animated.View
+                        style={[
+                          styles.topPromoBannerImageWrap,
+                          {
+                            width: topBannerImageWidth,
+                            height: ui.topBannerImageSize,
+                            transform: [
+                              { translateY: topBannerImageTranslateY },
+                              { scale: topBannerImageScale },
+                            ],
+                          },
+                        ]}>
+                        <Image
+                          source={topBannerImageSource}
+                          style={styles.topPromoBannerImage}
+                          contentFit="cover"
+                          transition={120}
+                          cachePolicy="memory-disk"
+                          onLoadStart={() => setTopBannerImageReady(false)}
+                          onLoadEnd={() => setTopBannerImageReady(true)}
+                        />
+                        {!topBannerImageReady ? <Skeleton style={styles.topPromoBannerImage} radius={24} /> : null}
+                      </Animated.View>
+                    </Animated.View>
+                  </Animated.View>
+                </Animated.View>
+              </Animated.View>
+            </Animated.View>
+
+            <Animated.FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              style={styles.productList}
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                { useNativeDriver: false }
+              )}
+              scrollEventThrottle={16}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={() => loadMenu(true)} tintColor={colors.primary} />
+              }
+              columnWrapperStyle={{
+                gap: ui.gap,
+                marginBottom: ui.gap,
+              }}
+              contentContainerStyle={{
+                paddingHorizontal: ui.pagePadding,
+                paddingTop: 0,
+                paddingBottom: 20,
+              }}
+              renderItem={({ item }) => (
+                <View style={{ width: ui.cardWidth }}>
+                  <ProductCard
+                    item={item}
+                    compact
+                    onPress={() => router.push(`/(user)/product/${item.id}`)}
+                  />
                 </View>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <ThemedText style={styles.emptyTitle}>No dishes yet</ThemedText>
+                  <ThemedText style={styles.emptyText}>
+                    Once the admin adds menu items, they will appear here automatically.
+                  </ThemedText>
+                </View>
+              }
+              ListHeaderComponent={
+                <View style={[styles.pageContent, { width: ui.contentWidth, alignSelf: 'center' }]}>
+                  <Animated.View style={{ height: topPromoSpacerHeight }} />
 
-                <View style={[styles.mainContentSurface, { marginHorizontal: -ui.pagePadding, paddingHorizontal: ui.pagePadding, marginTop: 8 }]}>
+                  <View style={[styles.mainContentSurface, { marginHorizontal: -ui.pagePadding, paddingHorizontal: ui.pagePadding, marginTop: 0 }]}>
                   <View
                     style={[
                       styles.heroCard,
@@ -525,9 +768,10 @@ export default function Home() {
                     </View>
                   </View>
                 </View>
-              </View>
-            }
-          />
+                </View>
+              }
+            />
+          </View>
         )}
 
       </SafeAreaView>
@@ -545,7 +789,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#8B1874',
   },
   productList: {
+    flex: 1,
     backgroundColor: '#EEF3F8',
+  },
+  screenBody: {
+    flex: 1,
+    position: 'relative',
   },
   emptyState: {
     alignItems: 'center',
@@ -582,32 +831,47 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     marginBottom: 0,
-    paddingBottom: 10,
+  },
+  topPromoStickyWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    elevation: 10,
+  },
+  topPromoSeparationGap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    backgroundColor: '#EEF3F8',
+    zIndex: 1,
   },
   topPromoGlowLarge: {
     position: 'absolute',
-    top: -44,
-    right: -36,
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: 10,
+    right: -18,
+    width: 188,
+    height: 188,
+    borderRadius: 94,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   topPromoGlowSmall: {
     position: 'absolute',
-    bottom: 28,
-    left: -32,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255,132,202,0.22)',
+    top: 128,
+    left: -18,
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    backgroundColor: 'rgba(255,132,202,0.18)',
   },
   topPromoHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 12,
+    overflow: 'hidden',
+    paddingTop: 2,
   },
   topAddressRow: {
     flex: 1,
@@ -654,15 +918,30 @@ const styles = StyleSheet.create({
     zIndex: 2,
     backgroundColor: 'transparent',
     borderRadius: 0,
-    paddingLeft: 4,
-    paddingRight: 0,
-    paddingVertical: 6,
+    paddingLeft: 8,
+    paddingRight: 8,
+    paddingTop: 0,
+    paddingBottom: 10,
+    justifyContent: 'flex-start',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  topPromoBannerBody: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'stretch',
+    gap: 12,
   },
   topPromoBannerCopy: {
     flex: 1,
+    minWidth: 0,
+    justifyContent: 'flex-start',
+    paddingTop: 2,
+    paddingBottom: 2,
+    minHeight: '100%',
+  },
+  topPromoBannerLead: {
+    gap: 2,
   },
   topPromoBannerBadge: {
     alignSelf: 'flex-start',
@@ -670,39 +949,26 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   topPromoBannerBadgeText: {
     color: '#8B1874',
     fontSize: FontSize.xs,
     fontWeight: '900',
   },
-  topPromoBannerEyebrow: {
-    color: '#F8CAE9',
-    fontSize: FontSize.xs,
-    fontWeight: '800',
-    letterSpacing: 1,
-    marginBottom: 2,
-  },
   topPromoBannerTitle: {
     color: '#FFFFFF',
     fontSize: 22,
-    lineHeight: 25,
+    lineHeight: 24,
     fontWeight: '900',
-  },
-  topPromoBannerSubtitle: {
-    color: 'rgba(255,255,255,0.84)',
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 4,
-    maxWidth: 170,
+    flexShrink: 1,
   },
   topPromoBannerFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 8,
+    gap: 8,
+    marginTop: 14,
   },
   topPromoBannerCta: {
     flexDirection: 'row',
@@ -722,12 +988,26 @@ const styles = StyleSheet.create({
     color: '#FCE7F5',
     fontSize: 11,
     fontWeight: '800',
+    flexShrink: 1,
+  },
+  topPromoBannerVisualLane: {
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 24,
+    paddingBottom: 0,
+    overflow: 'hidden',
   },
   topPromoBannerImageWrap: {
     position: 'relative',
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.14)',
+    flexShrink: 0,
+    shadowColor: '#2B0626',
+    shadowOpacity: 0.22,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
   },
   topPromoBannerImage: {
     width: '100%',

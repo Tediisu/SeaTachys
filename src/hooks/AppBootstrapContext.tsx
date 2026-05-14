@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useSegments } from 'expo-router';
 import { bootstrapService, type AdminBootstrapData, type PublicBootstrapData } from '@/services/bootstrap.services';
 import { useAuth } from './AuthContext';
 
@@ -17,6 +18,7 @@ type AppBootstrapContextValue = {
   adminLoading: boolean;
   refreshPublicData: () => Promise<void>;
   refreshAdminData: () => Promise<void>;
+  primePublicData: (mode?: 'full' | 'shell') => Promise<void>;
 };
 
 const emptyPublicData: PublicBootstrapState = {
@@ -40,16 +42,21 @@ const AppBootstrapContext = createContext<AppBootstrapContextValue>({
   adminLoading: false,
   refreshPublicData: async () => {},
   refreshAdminData: async () => {},
+  primePublicData: async () => {},
 });
 
 export function AppBootstrapProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const segments = useSegments();
   const [publicData, setPublicData] = useState<PublicBootstrapState>(emptyPublicData);
   const [adminData, setAdminData] = useState<AdminBootstrapState>(emptyAdminData);
   const [publicLoading, setPublicLoading] = useState(true);
   const [adminLoading, setAdminLoading] = useState(false);
   const hasHydratedPublicCache = useRef(false);
   const hasHydratedAdminCache = useRef(false);
+  const publicRequestId = useRef(0);
+  const adminRequestId = useRef(0);
+  const isAuthRoute = segments[0] === '(auth)';
 
   const hydratePublicCache = async () => {
     if (hasHydratedPublicCache.current) {
@@ -82,53 +89,109 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
   };
 
   const refreshPublicData = async () => {
+    const requestId = ++publicRequestId.current;
     setPublicLoading(true);
     try {
       const refreshed = await bootstrapService.refreshPublicData();
+      if (requestId !== publicRequestId.current) {
+        return;
+      }
+
       setPublicData({
         ...refreshed.data,
         updatedAt: refreshed.updatedAt,
       });
+    } catch (error) {
+      console.log('Public bootstrap failed:', error);
     } finally {
-      setPublicLoading(false);
+      if (requestId === publicRequestId.current) {
+        setPublicLoading(false);
+      }
+    }
+  };
+
+  const primePublicData = async (mode: 'full' | 'shell' = 'full') => {
+    const requestId = ++publicRequestId.current;
+    await hydratePublicCache();
+
+    try {
+      const refreshed =
+        mode === 'shell'
+          ? await bootstrapService.refreshPublicShellData()
+          : await bootstrapService.refreshPublicData();
+
+      if (requestId !== publicRequestId.current) {
+        return;
+      }
+
+      setPublicData({
+        ...refreshed.data,
+        updatedAt: refreshed.updatedAt,
+      });
+    } catch (error) {
+      console.log(`Public bootstrap prime failed (${mode}):`, error);
     }
   };
 
   const refreshAdminData = async () => {
+    const requestId = ++adminRequestId.current;
     setAdminLoading(true);
     try {
       const refreshed = await bootstrapService.refreshAdminData();
+      if (requestId !== adminRequestId.current) {
+        return;
+      }
+
       setAdminData({
         ...refreshed.data,
         updatedAt: refreshed.updatedAt,
       });
+    } catch (error) {
+      console.log('Admin bootstrap failed:', error);
     } finally {
-      setAdminLoading(false);
+      if (requestId === adminRequestId.current) {
+        setAdminLoading(false);
+      }
     }
   };
 
   useEffect(() => {
+    if (isAuthRoute) {
+      setPublicLoading(false);
+      return;
+    }
+
     const bootstrap = async () => {
-      await hydratePublicCache();
-      await refreshPublicData();
+      try {
+        await hydratePublicCache();
+        await refreshPublicData();
+      } catch (error) {
+        console.log('Initial public bootstrap failed:', error);
+        setPublicLoading(false);
+      }
     };
 
     bootstrap();
-  }, []);
+  }, [isAuthRoute]);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (isAuthRoute || user?.role !== 'admin') {
       setAdminLoading(false);
       return;
     }
 
     const bootstrapAdmin = async () => {
-      await hydrateAdminCache();
-      await refreshAdminData();
+      try {
+        await hydrateAdminCache();
+        await refreshAdminData();
+      } catch (error) {
+        console.log('Initial admin bootstrap failed:', error);
+        setAdminLoading(false);
+      }
     };
 
     bootstrapAdmin();
-  }, [user?.role]);
+  }, [isAuthRoute, user?.role]);
 
   return (
     <AppBootstrapContext.Provider
@@ -139,6 +202,7 @@ export function AppBootstrapProvider({ children }: { children: React.ReactNode }
         adminLoading,
         refreshPublicData,
         refreshAdminData,
+        primePublicData,
       }}
     >
       {children}

@@ -79,15 +79,55 @@ public class AuthController : ControllerBase
         if (result == PasswordVerificationResult.Failed) return Unauthorized("Invalid credentials.");
 
         var token = GenerateJwt(user, DateTime.UtcNow.AddDays(7));
-        return Ok(new AuthResponseDto(token));
+        return Ok(new AuthResponseDto(
+            token,
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role.ToString()));
+    }
+
+    [HttpPost("lookup-email")]
+    [AllowAnonymous]
+    [EnableRateLimiting("auth")]
+    public async Task<IActionResult> LookupEmail(EmailLookupRequest req)
+    {
+        var normalizedEmail = req.Email.Trim().ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return BadRequest("Email is required.");
+        }
+
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == normalizedEmail);
+
+        if (user == null)
+        {
+            return NotFound("No account found for this email.");
+        }
+
+        if (!user.IsActive)
+        {
+            return Unauthorized("This account is inactive.");
+        }
+
+        return Ok(new EmailLookupResponseDto(
+            user.Id,
+            user.FullName,
+            user.Email,
+            user.Role.ToString()));
     }
 
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var email = User.FindFirstValue(ClaimTypes.Email);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        var email = User.FindFirstValue(ClaimTypes.Email)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Email);
         var role = User.FindFirstValue(ClaimTypes.Role);
 
         var user = await _db.Users.FindAsync(Guid.Parse(userId!));
@@ -125,7 +165,10 @@ public class AuthController : ControllerBase
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email)
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(ClaimTypes.Name, user.FullName),
+            new Claim("full_name", user.FullName)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_cfg["Jwt:Key"]!));
@@ -144,5 +187,7 @@ public class AuthController : ControllerBase
 
 public record RegisterRequest(string FullName, string Email, string Password, string? PhoneNumber);
 public record LoginRequest(string Email, string Password);
+public record EmailLookupRequest(string Email);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
-public record AuthResponseDto(string Token);
+public record EmailLookupResponseDto(Guid UserId, string FullName, string Email, string Role);
+public record AuthResponseDto(string Token, Guid UserId, string FullName, string Email, string Role);

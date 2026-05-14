@@ -5,22 +5,39 @@ import Button from '@/components/ui/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { authService } from '@/services/auth.services';
-import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
+import { useAuth } from '@/hooks/use-auth';
 
 const INPUT_TEXT_COLOR = '#111827';
-const EMAIL_PATTERN = /\S+@\S+\.\S+/;
 
-export default function Login() {
+const getHomeRoute = (role: string) => {
+  switch (role) {
+    case 'admin':
+      return '/(admin)/Dashboard';
+    case 'customer':
+      return '/(user)/Home';
+    default:
+      return '/(guest)/Home';
+  }
+};
+
+export default function Password() {
   const colors = useTheme();
   const router = useRouter();
-  const { primePublicData } = useAppBootstrap();
+  const { login } = useAuth();
   const { width, height } = useWindowDimensions();
+  const params = useLocalSearchParams<{
+    email?: string;
+    fullName?: string;
+    role?: string;
+  }>();
 
-  const [email, setEmail] = useState('');
+  const email = typeof params.email === 'string' ? params.email : '';
+  const fullName = typeof params.fullName === 'string' ? params.fullName : '';
+
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,16 +55,13 @@ export default function Login() {
     };
   }, [height, width]);
 
-  const handleContinue = async () => {
-    const normalizedEmail = email.trim().toLowerCase();
+  if (!email) {
+    return <Redirect href="/(auth)/Login" />;
+  }
 
-    if (!normalizedEmail) {
-      setError('Please enter your email address.');
-      return;
-    }
-
-    if (!EMAIL_PATTERN.test(normalizedEmail)) {
-      setError('Please enter a valid email address.');
+  const handleLogin = async () => {
+    if (!password.trim()) {
+      setError('Please enter your password.');
       return;
     }
 
@@ -55,23 +69,16 @@ export default function Login() {
     setError('');
 
     try {
-      const account = await authService.lookupEmail(normalizedEmail);
-
-      void primePublicData('shell').catch((primeError) => {
-        console.log('Email-step preload skipped:', primeError);
-      });
-
-      router.push({
-        pathname: '/(auth)/Password',
-        params: {
-          email: account.email,
-          fullName: account.fullName,
-          role: account.role,
-        },
-      });
+      const authUser = await login(email, password);
+      console.log('✓ Login: session ready, navigating...');
+      router.replace(getHomeRoute(authUser.role));
     } catch (err: any) {
-      console.log('✗ Email lookup failed:', err.message);
-      setError(err?.message || 'Unable to continue with this email.');
+      console.log('✗ Login failed:', err.message);
+      const message =
+        err?.message === 'Unauthorized' || err?.message === 'Invalid credentials.'
+          ? 'Invalid email or password.'
+          : err?.message || 'Login failed';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -117,10 +124,10 @@ export default function Login() {
                   { fontSize: ui.heroTitle, lineHeight: ui.heroTitle + 4 },
                 ]}
               >
-                Welcome Back
+                {fullName ? `Hi, ${fullName.split(' ')[0]}` : 'Welcome Back'}
               </ThemedText>
               <ThemedText style={styles.heroSubtitle}>
-                Start with your email so we can get your account ready before the password step.
+                Your account is ready. Enter your password to finish signing in.
               </ThemedText>
             </View>
 
@@ -134,52 +141,52 @@ export default function Login() {
               ]}
             >
               <View style={styles.cardHeader}>
-                <ThemedText style={styles.cardTitle}>Continue with Email</ThemedText>
+                <ThemedText style={styles.cardTitle}>Enter Password</ThemedText>
                 <ThemedText style={styles.cardCaption}>
-                  We&apos;ll look up your account first, then take you to your password screen.
+                  Signing in as {email}
                 </ThemedText>
               </View>
 
               <View style={styles.fieldGroup}>
-                <ThemedText style={styles.label}>Email</ThemedText>
+                <ThemedText style={styles.label}>Password</ThemedText>
                 <View style={[styles.inputShell, { minHeight: ui.inputHeight }]}>
-                  <Ionicons name="mail-outline" size={18} color={colors.primary} />
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
                   <TextInput
-                    placeholder="Email"
+                    placeholder="Password"
                     placeholderTextColor={colors.textSecondary}
                     style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="email-address"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
                     keyboardAppearance="light"
                     selectionColor={colors.primary}
                     cursorColor={colors.primary}
-                    returnKeyType="next"
-                    onSubmitEditing={handleContinue}
+                    returnKeyType="go"
+                    onSubmitEditing={handleLogin}
                   />
                 </View>
+              </View>
+
+              <View style={styles.metaRow}>
+                <Pressable onPress={() => router.replace({ pathname: '/(auth)/Login' })}>
+                  <ThemedText style={styles.linkText}>Use a different email</ThemedText>
+                </Pressable>
+                <Pressable>
+                  <ThemedText style={styles.linkText}>Forgot Password?</ThemedText>
+                </Pressable>
               </View>
 
               {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
 
               <View style={styles.primaryAction}>
                 <Button
-                  label={loading ? 'Checking account...' : 'Continue'}
+                  label={loading ? 'Logging in...' : 'Login'}
                   variant="secondary"
-                  onPress={handleContinue}
+                  onPress={handleLogin}
                   size="large"
                   radius={20}
                   style={{ paddingHorizontal: 0, width: '100%' }}
                 />
-              </View>
-
-              <View style={styles.footer}>
-                <ThemedText style={styles.footerText}>Don&apos;t have an account? </ThemedText>
-                <Pressable onPress={() => router.push('/(auth)/SignUp')}>
-                  <ThemedText style={styles.linkText}>Sign Up</ThemedText>
-                </Pressable>
               </View>
             </View>
           </ScrollView>
@@ -280,23 +287,21 @@ const styles = StyleSheet.create({
     color: INPUT_TEXT_COLOR,
     paddingVertical: 16,
   },
+  metaRow: {
+    marginTop: 8,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
   errorText: {
     color: '#FFE1E1',
-    marginTop: 4,
     marginBottom: 10,
     fontSize: FontSize.small,
   },
   primaryAction: {
-    marginTop: 8,
-  },
-  footer: {
-    marginTop: 18,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: 'rgba(255,255,255,0.72)',
+    marginTop: 4,
   },
   linkText: {
     color: '#FFFFFF',

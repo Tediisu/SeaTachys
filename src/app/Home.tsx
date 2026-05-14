@@ -53,7 +53,7 @@ export default function Home() {
           </View>
         </View>
         <View style={styles.greetings}>
-            <ThemedText type="small" themeColor='primary'>Hello {user?.fullname || 'There'}! Greetings</ThemedText>
+            <ThemedText type="small" themeColor='primary'>Hello {user?.fullName || 'There'}! Greetings</ThemedText>
         </View>
         <View style={styles.searchbar}>
           <View style={styles.sbar}>
