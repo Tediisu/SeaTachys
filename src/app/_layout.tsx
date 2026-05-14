@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import React from 'react';
 import { useColorScheme } from 'react-native';
-import { Slot } from 'expo-router';
+import { Redirect, Slot, useSegments } from 'expo-router';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { useAuth } from '@/hooks/use-auth';
 import { CartProvider } from '@/hooks/use-cart';
@@ -10,10 +10,27 @@ import { AppBootstrapProvider } from '@/hooks/AppBootstrapContext';
 import { AppBootSkeleton } from '@/components/ui/SkeletonScreens';
 
 function AppShell() {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const inAuthGroup = segments[0] === '(auth)';
 
-  if (loading) {
+  if (loading && !user) {
     return <AppBootSkeleton />;
+  }
+
+  if (!user && !inAuthGroup) {
+    return <Redirect href="/(auth)/Continue" />;
+  }
+
+  if (user && inAuthGroup) {
+    switch (user.role) {
+      case 'admin':
+        return <Redirect href="/(admin)/Dashboard" />;
+      case 'customer':
+        return <Redirect href="/(user)/Home" />;
+      default:
+        return <Redirect href="/(guest)/Home" />;
+    }
   }
 
   return (

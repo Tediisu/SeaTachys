@@ -45,6 +45,7 @@ const resolveApiUrl = () => {
 };
 
 const API_URL = resolveApiUrl();
+const REQUEST_TIMEOUT_MS = 15000;
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -52,9 +53,12 @@ export const apiFetch = async (
   endpoint: string,
   method: HttpMethod = 'GET',
   body?: object,
-  includeAuth: boolean = true
+  includeAuth: boolean = true,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
 ): Promise<any> => {
   const token = includeAuth ? await storage.getToken() : null;
+  const controller = new AbortController();
+  const abortTimeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -67,33 +71,49 @@ export const apiFetch = async (
   console.log('Request:', method, `${API_URL}${endpoint}`);
   console.log('Token:', token ? `${token.substring(0, 20)}...` : 'none');
 
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const text = await res.text();
-  console.log('Response:', res.status, '| Body:', text || '(empty)');
-
-  let data: any = null;
-
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = { message: text || 'Non-JSON response from server' };
-  }
+    const res = await Promise.race([
+      fetch(`${API_URL}${endpoint}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      }),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Request timed out for ${endpoint}`)), timeoutMs);
+      }),
+    ]);
 
-  if (res.status === 401) {
-    if (includeAuth) {
-      await storage.clearAuth();
+    const text = await res.text();
+    console.log('Response:', res.status, '| Body:', text || '(empty)');
+
+    let data: any = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = { message: text || 'Non-JSON response from server' };
     }
-    throw new Error(data?.message || 'Unauthorized');
-  }
 
-  if (!res.ok) {
-    throw new Error(data?.message || `${res.status} ${res.statusText}` || 'Something went wrong');
-  }
+    if (res.status === 401) {
+      if (includeAuth) {
+        await storage.clearAuth();
+      }
+      throw new Error(data?.message || 'Unauthorized');
+    }
 
-  return data;
+    if (!res.ok) {
+      throw new Error(data?.message || `${res.status} ${res.statusText}` || 'Something went wrong');
+    }
+
+    return data;
+  } catch (error: any) {
+    if (error?.name === 'AbortError' || typeof error?.message === 'string' && error.message.includes('timed out')) {
+      throw new Error(`Request timed out for ${endpoint}`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(abortTimeoutId);
+  }
 };

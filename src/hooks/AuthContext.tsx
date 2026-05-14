@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { authService } from '@/services/auth.services';
+import { storage } from '@/utils/storage';
 
 export type AuthUser = {
   userId: string;
@@ -13,7 +14,7 @@ type AuthContextType = {
   loading: boolean;
   error: string;
   refetch: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 };
 
@@ -22,7 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   error: '',
   refetch: async () => {},
-  login: async () => {},
+  login: async () => ({ userId: '', fullName: '', email: '', role: '' }),
   logout: async () => {},
 });
 
@@ -30,35 +31,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const authRequestId = useRef(0);
 
   const fetchUser = async () => {
+    const requestId = ++authRequestId.current;
+
     try {
       const data = await authService.getMe();
+      if (requestId !== authRequestId.current) {
+        return;
+      }
+
       console.log('✓ Auth: logged in as', data?.email, '|', data?.role);
       setUser(data);
+      await storage.saveUser(data);
       setError('');
     } catch (err: any) {
-      console.log('✗ Auth: not logged in —', err.message);
-      setUser(null);
-      setError(err.message);
+      if (requestId !== authRequestId.current) {
+        return;
+      }
+
+      console.log('✗ Auth refresh failed —', err.message);
+
+      if (err?.message === 'Unauthorized') {
+        setUser(null);
+        setError(err.message);
+        await storage.clearAuth();
+      } else {
+        const cachedUser = await storage.getUser();
+        if (cachedUser) {
+          setUser(cachedUser);
+          setError('');
+        } else {
+          setUser(null);
+          setError(err.message);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (requestId === authRequestId.current) {
+        setLoading(false);
+      }
     }
   };
 
   const login = async (email: string, password: string) => {
-    setLoading(true);
+    const requestId = ++authRequestId.current;
 
     try {
-      await authService.login(email, password);
-      await fetchUser();
+      const data = await authService.login(email, password);
+      const authUser = {
+        userId: data.userId,
+        fullName: data.fullName,
+        email: data.email,
+        role: data.role,
+      };
+
+      if (requestId !== authRequestId.current) {
+        return authUser;
+      }
+
+      setUser(authUser);
+      await storage.saveUser(authUser);
+      setError('');
+      return authUser;
     } catch (err) {
-      setLoading(false);
       throw err;
     }
   };
 
   const logout = async () => {
+    authRequestId.current += 1;
     await authService.logout();
     setUser(null);
     setError('');
@@ -66,7 +108,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUser();
+    const bootstrapAuth = async () => {
+      const cachedUser = await storage.getUser();
+      const token = await storage.getToken();
+
+      if (cachedUser) {
+        setUser(cachedUser);
+        setLoading(false);
+      }
+
+      if (!token) {
+        setUser(cachedUser ?? null);
+        setLoading(false);
+        setError('');
+        return;
+      }
+
+      await fetchUser();
+    };
+
+    bootstrapAuth();
   }, []);
 
   return (

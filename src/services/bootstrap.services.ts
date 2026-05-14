@@ -35,16 +35,59 @@ export const bootstrapService = {
   },
 
   refreshPublicData: async (): Promise<CachedBootstrap<PublicBootstrapData>> => {
-    const [categories, items, promos, banner] = await Promise.all([
+    const cached = await readCachedValue<PublicBootstrapData>(PUBLIC_BOOTSTRAP_KEY);
+
+    const [categoriesResult, itemsResult, promosResult, bannerResult] = await Promise.allSettled([
       menuService.getCategories(),
       menuService.getItems(),
-      homePromoService.getPublicPromos().catch(() => [] as HomePromoSlide[]),
-      homePromoService.getPublicBanner().catch(() => null),
+      homePromoService.getPublicPromos(),
+      homePromoService.getPublicBanner(),
     ]);
+
+    const categories =
+      categoriesResult.status === 'fulfilled'
+        ? categoriesResult.value
+        : cached?.data.categories ?? [];
+
+    const items =
+      itemsResult.status === 'fulfilled'
+        ? itemsResult.value
+        : cached?.data.items ?? [];
+
+    const promos =
+      promosResult.status === 'fulfilled'
+        ? promosResult.value
+        : cached?.data.promos ?? [];
+
+    const banner =
+      bannerResult.status === 'fulfilled'
+        ? bannerResult.value
+        : cached?.data.banner ?? null;
 
     return await writeCachedValue(PUBLIC_BOOTSTRAP_KEY, {
       categories,
       items,
+      promos,
+      banner,
+    });
+  },
+
+  refreshPublicShellData: async (): Promise<CachedBootstrap<PublicBootstrapData>> => {
+    const cached = await readCachedValue<PublicBootstrapData>(PUBLIC_BOOTSTRAP_KEY);
+
+    const [promos, banner] = await Promise.all([
+      homePromoService.getPublicPromos().catch(() => cached?.data.promos ?? [] as HomePromoSlide[]),
+      homePromoService.getPublicBanner().catch(() => cached?.data.banner ?? null),
+    ]);
+
+    // Re-read the latest cache before writing so a slower shell prime
+    // never overwrites newer categories/items fetched by a full refresh.
+    const latestCached = await readCachedValue<PublicBootstrapData>(PUBLIC_BOOTSTRAP_KEY);
+    const preservedData = latestCached?.data ?? cached?.data;
+
+    return await writeCachedValue(PUBLIC_BOOTSTRAP_KEY, {
+      categories: preservedData?.categories ?? [],
+      items: preservedData?.items ?? [],
       promos,
       banner,
     });

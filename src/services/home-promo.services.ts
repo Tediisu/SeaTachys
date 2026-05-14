@@ -1,5 +1,31 @@
 import { apiFetch } from './api';
 
+const BANNER_TIMEOUT_MS = 45000;
+const BANNER_RETRY_ATTEMPTS = 3;
+
+const isTimeoutError = (error: unknown) =>
+  error instanceof Error && error.message.includes('Request timed out');
+
+async function withTimeoutRetry<T>(run: () => Promise<T>, attempts = BANNER_RETRY_ATTEMPTS): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      lastError = error;
+
+      if (!isTimeoutError(error) || attempt === attempts) {
+        throw error;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Unable to complete banner request.');
+}
+
 export type HomePromoSlide = {
   position: number;
   badge: string;
@@ -13,9 +39,7 @@ export type HomePromoSlide = {
 
 export type HomeTopBanner = {
   badge: string;
-  eyebrow: string;
   title: string;
-  subtitle: string;
   ctaLabel: string;
   accentText: string;
   imageUrl?: string | null;
@@ -27,7 +51,9 @@ export const homePromoService = {
   },
 
   getPublicBanner: async () => {
-    return await apiFetch('/api/home/banner', 'GET', undefined, false) as HomeTopBanner;
+    return await withTimeoutRetry(
+      async () => await apiFetch('/api/home/banner', 'GET', undefined, false, BANNER_TIMEOUT_MS) as HomeTopBanner
+    );
   },
 
   getAdminPromos: async () => {
@@ -35,7 +61,9 @@ export const homePromoService = {
   },
 
   getAdminBanner: async () => {
-    return await apiFetch('/api/admin/home-banner') as HomeTopBanner;
+    return await withTimeoutRetry(
+      async () => await apiFetch('/api/admin/home-banner', 'GET', undefined, true, BANNER_TIMEOUT_MS) as HomeTopBanner
+    );
   },
 
   updatePromos: async (slides: HomePromoSlide[]) => {
@@ -43,6 +71,8 @@ export const homePromoService = {
   },
 
   updateBanner: async (banner: HomeTopBanner) => {
-    return await apiFetch('/api/admin/home-banner', 'PUT', { banner }) as HomeTopBanner;
+    return await withTimeoutRetry(
+      async () => await apiFetch('/api/admin/home-banner', 'PUT', { banner }, true, BANNER_TIMEOUT_MS) as HomeTopBanner
+    );
   },
 };

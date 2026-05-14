@@ -96,9 +96,7 @@ type HomePromoFormSlide = {
 
 type HomeTopBannerForm = {
   badge: string;
-  eyebrow: string;
   title: string;
-  subtitle: string;
   ctaLabel: string;
   accentText: string;
   imageUri?: string;
@@ -169,9 +167,7 @@ const defaultHomePromos = (): HomePromoFormSlide[] => ([
 
 const defaultHomeTopBanner = (): HomeTopBannerForm => ({
   badge: 'Fresh Drop',
-  eyebrow: 'SEATACHYS EXPRESS',
   title: 'Seafood cravings solved fast',
-  subtitle: 'A brighter featured banner for your best daily offers and newest dishes.',
   ctaLabel: 'Order now',
   accentText: 'Open today',
   imageUri: undefined,
@@ -212,9 +208,7 @@ function mapHomePromoSlide(slide: HomePromoSlide): HomePromoFormSlide {
 function mapHomeTopBanner(banner: HomeTopBanner): HomeTopBannerForm {
   return {
     badge: banner.badge,
-    eyebrow: banner.eyebrow,
     title: banner.title,
-    subtitle: banner.subtitle,
     ctaLabel: banner.ctaLabel,
     accentText: banner.accentText,
     imageUri: banner.imageUrl ?? undefined,
@@ -504,15 +498,6 @@ function HomeTopBannerModal({
               onChangeText={(value) => setBanner((current) => ({ ...current, badge: value }))}
             />
 
-            <Text style={styles.fieldLabel}>Eyebrow</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="SEATACHYS EXPRESS"
-              placeholderTextColor={TEXT_SECONDARY}
-              value={banner.eyebrow}
-              onChangeText={(value) => setBanner((current) => ({ ...current, eyebrow: value }))}
-            />
-
             <Text style={styles.fieldLabel}>Title</Text>
             <TextInput
               style={styles.input}
@@ -520,17 +505,6 @@ function HomeTopBannerModal({
               placeholderTextColor={TEXT_SECONDARY}
               value={banner.title}
               onChangeText={(value) => setBanner((current) => ({ ...current, title: value }))}
-            />
-
-            <Text style={styles.fieldLabel}>Subtitle</Text>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              placeholder="Short supporting copy"
-              placeholderTextColor={TEXT_SECONDARY}
-              multiline
-              numberOfLines={3}
-              value={banner.subtitle}
-              onChangeText={(value) => setBanner((current) => ({ ...current, subtitle: value }))}
             />
 
             <View style={styles.promoEditorStatRow}>
@@ -1256,9 +1230,7 @@ export default function Dashboard() {
     try {
       const payload = {
         badge: banner.badge.trim(),
-        eyebrow: banner.eyebrow.trim(),
         title: banner.title.trim(),
-        subtitle: banner.subtitle.trim(),
         ctaLabel: banner.ctaLabel.trim(),
         accentText: banner.accentText.trim(),
         imageUrl: banner.imageUri
@@ -1330,12 +1302,8 @@ export default function Dashboard() {
               <View style={[styles.promoSummaryCard, styles.bannerSummaryCard]}>
                 <View style={styles.bannerSummaryContent}>
                   <Text style={styles.promoSummaryBadge}>{homeBanner.badge || 'Top banner'}</Text>
-                  <Text style={styles.bannerSummaryEyebrow}>{homeBanner.eyebrow || 'HOME HEADER'}</Text>
                   <Text style={styles.bannerSummaryTitle} numberOfLines={2}>
                     {homeBanner.title || 'No top banner title yet'}
-                  </Text>
-                  <Text style={styles.bannerSummarySubtitle} numberOfLines={2}>
-                    {homeBanner.subtitle || 'Add a brighter top promo banner for the customer home screen.'}
                   </Text>
                   <View style={styles.bannerSummaryFooter}>
                     <View style={styles.bannerCtaPill}>
