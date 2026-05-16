@@ -24,6 +24,11 @@ import {
   type AdminCategory,
   type AdminMenuItem,
 } from '@/services/admin-menu.services';
+import {
+  adminOrdersService,
+  type AdminOrder,
+  type AdminOrderStatus,
+} from '@/services/admin-orders.services';
 import { homePromoService, type HomePromoSlide, type HomeTopBanner } from '@/services/home-promo.services';
 import { imageUploadService } from '@/services/image-upload.services';
 import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
@@ -99,10 +104,14 @@ type HomeTopBannerForm = {
   title: string;
   ctaLabel: string;
   accentText: string;
+  durationHours: number;
+  endsAt?: string;
   imageUri?: string;
   imageMimeType?: string;
   imageFileName?: string;
 };
+
+type AdminSection = 'orders' | 'menu' | 'categories' | 'home';
 
 const emptyForm = (): ProductForm => ({
   name: '',
@@ -170,10 +179,49 @@ const defaultHomeTopBanner = (): HomeTopBannerForm => ({
   title: 'Seafood cravings solved fast',
   ctaLabel: 'Order now',
   accentText: 'Open today',
+  durationHours: 24,
+  endsAt: undefined,
   imageUri: undefined,
   imageMimeType: undefined,
   imageFileName: undefined,
 });
+
+const ADMIN_SECTIONS: { key: AdminSection; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'orders', label: 'Orders', icon: 'receipt-outline' },
+  { key: 'menu', label: 'Menu', icon: 'restaurant-outline' },
+  { key: 'categories', label: 'Categories', icon: 'grid-outline' },
+  { key: 'home', label: 'Home', icon: 'sparkles-outline' },
+];
+
+const ORDER_FILTERS: { label: string; value?: AdminOrderStatus }[] = [
+  { label: 'All' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
+  { label: 'Preparing', value: 'preparing' },
+  { label: 'Ready', value: 'ready_for_pickup' },
+  { label: 'Delivery', value: 'on_the_way' },
+  { label: 'Done', value: 'delivered' },
+];
+
+const NEXT_ORDER_STATUSES: Partial<Record<AdminOrderStatus, AdminOrderStatus[]>> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['preparing', 'cancelled'],
+  preparing: ['ready_for_pickup', 'cancelled'],
+  ready_for_pickup: ['picked_up', 'cancelled'],
+  picked_up: ['on_the_way'],
+  on_the_way: ['delivered'],
+};
+
+const ORDER_STATUS_LABELS: Record<AdminOrderStatus, string> = {
+  pending: 'Pending',
+  confirmed: 'Confirmed',
+  preparing: 'Preparing',
+  ready_for_pickup: 'Ready for pickup',
+  picked_up: 'Picked up',
+  on_the_way: 'On the way',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
 
 function mapMenuItem(item: AdminMenuItem): DashboardProduct {
   return {
@@ -211,6 +259,8 @@ function mapHomeTopBanner(banner: HomeTopBanner): HomeTopBannerForm {
     title: banner.title,
     ctaLabel: banner.ctaLabel,
     accentText: banner.accentText,
+    durationHours: banner.durationHours ?? 24,
+    endsAt: banner.endsAt ?? undefined,
     imageUri: banner.imageUrl ?? undefined,
     imageMimeType: undefined,
     imageFileName: undefined,
@@ -405,6 +455,35 @@ function HomePromoModal({
   );
 }
 
+function formatPeso(value: number) {
+  return `P${Number(value).toFixed(2)}`;
+}
+
+function formatPlacedAt(value: string) {
+  return new Date(value).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getOrderStatusStyle(status: AdminOrderStatus) {
+  switch (status) {
+    case 'delivered':
+      return styles.orderStatusDelivered;
+    case 'cancelled':
+      return styles.orderStatusCancelled;
+    case 'on_the_way':
+    case 'picked_up':
+      return styles.orderStatusTransit;
+    case 'ready_for_pickup':
+      return styles.orderStatusReady;
+    default:
+      return styles.orderStatusActive;
+  }
+}
+
 function HomeTopBannerModal({
   visible,
   onClose,
@@ -459,7 +538,10 @@ function HomeTopBannerModal({
     }
 
     try {
-      await onSave(banner);
+      await onSave({
+        ...banner,
+        endsAt: new Date(Date.now() + banner.durationHours * 60 * 60 * 1000).toISOString(),
+      });
       onClose();
     } catch (err: any) {
       Alert.alert('Unable to save banner', err.message || 'Please try again.');
@@ -529,6 +611,31 @@ function HomeTopBannerModal({
                 />
               </View>
             </View>
+
+            <Text style={styles.fieldLabel}>Featured Duration</Text>
+            <View style={styles.bannerDurationRow}>
+              {[
+                { label: '24 hrs', hours: 24 },
+                { label: '7 days', hours: 24 * 7 },
+                { label: '30 days', hours: 24 * 30 },
+              ].map((option) => {
+                const selected = banner.durationHours === option.hours;
+                return (
+                  <TouchableOpacity
+                    key={option.hours}
+                    style={[styles.bannerDurationChip, selected && styles.bannerDurationChipSelected]}
+                    onPress={() => setBanner((current) => ({ ...current, durationHours: option.hours }))}
+                  >
+                    <Text style={[styles.bannerDurationText, selected && styles.bannerDurationTextSelected]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={styles.bannerDurationHint}>
+              Countdown restarts from the selected duration when you save the banner.
+            </Text>
           </ScrollView>
 
           <View style={styles.modalFooter}>
@@ -985,8 +1092,13 @@ export default function Dashboard() {
   const router = useRouter();
   const { adminData, adminLoading, refreshAdminData } = useAppBootstrap();
   const { logout } = useAuth();
+  const [activeSection, setActiveSection] = useState<AdminSection>('orders');
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [orderFilter, setOrderFilter] = useState<AdminOrderStatus | undefined>();
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('All');
   const [modalVisible, setModalVisible] = useState(false);
@@ -1008,16 +1120,41 @@ export default function Dashboard() {
     }
   };
 
+  const loadOrders = async (status = orderFilter) => {
+    setOrdersLoading(true);
+    try {
+      const nextOrders = await adminOrdersService.list(status);
+      setOrders(nextOrders);
+    } catch (err: any) {
+      Alert.alert('Unable to load orders', err.message || 'Please try again.');
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadDashboard();
+    loadOrders();
   }, []);
 
   useEffect(() => {
-    if (adminData.categories.length > 0 || adminData.items.length > 0 || adminData.promos.length > 0 || adminData.banner || !adminLoading) {
+    const hasIncomingMenuData = adminData.categories.length > 0 || adminData.items.length > 0;
+    const hasCurrentMenuData = categories.length > 0 || products.length > 0;
+
+    if (hasIncomingMenuData || (!hasCurrentMenuData && !adminLoading)) {
       setCategories(adminData.categories);
       setProducts(adminData.items.map(mapMenuItem));
+    }
+
+    if (adminData.promos.length > 0 || !adminLoading) {
       setHomePromos(adminData.promos.length > 0 ? adminData.promos.map(mapHomePromoSlide) : defaultHomePromos());
+    }
+
+    if (adminData.banner || !adminLoading) {
       setHomeBanner(adminData.banner ? mapHomeTopBanner(adminData.banner) : defaultHomeTopBanner());
+    }
+
+    if (hasIncomingMenuData || !adminLoading) {
       setLoading(false);
     }
   }, [adminData, adminLoading]);
@@ -1026,7 +1163,10 @@ export default function Dashboard() {
   const available = products.filter((p) => p.isAvailable).length;
   const featured = products.filter((p) => p.isFeatured).length;
 
-  const categoryFilters = useMemo(() => ['All', ...categories.map((c) => c.name)], [categories]);
+  const categoryFilters = useMemo(
+    () => ['All', ...Array.from(new Set(categories.map((c) => c.name)))],
+    [categories]
+  );
 
   const filtered = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -1131,7 +1271,6 @@ export default function Dashboard() {
     try {
       await adminMenuService.deleteItem(item.id);
       setProducts((prev) => prev.filter((product) => product.id !== item.id));
-      refreshAdminData().catch(() => {});
     } catch (err: any) {
       Alert.alert('Unable to delete item', err.message || 'Please try again.');
     }
@@ -1167,7 +1306,6 @@ export default function Dashboard() {
         });
         setCategories((prev) => [...prev, created].sort((a, b) => a.displayOrder - b.displayOrder));
       }
-      refreshAdminData().catch(() => {});
     } finally {
       setSaving(false);
       setEditingCategory(null);
@@ -1178,7 +1316,6 @@ export default function Dashboard() {
     try {
       await adminMenuService.deleteCategory(category.id);
       setCategories((prev) => prev.filter((item) => item.id !== category.id));
-      refreshAdminData().catch(() => {});
     } catch (err: any) {
       Alert.alert('Unable to delete category', err.message || 'Please try again.');
     }
@@ -1190,6 +1327,32 @@ export default function Dashboard() {
       router.replace('/(auth)/Continue');
     } catch (err: any) {
       Alert.alert('Unable to logout', err.message || 'Please try again.');
+    }
+  };
+
+  const handleChangeOrderFilter = async (status?: AdminOrderStatus) => {
+    setOrderFilter(status);
+    await loadOrders(status);
+  };
+
+  const handleAdvanceOrderStatus = async (order: AdminOrder, status: AdminOrderStatus) => {
+    setUpdatingOrderId(order.id);
+    try {
+      const updated = await adminOrdersService.updateStatus(order.id, status, order.riderId ?? null);
+      setOrders((current) =>
+        current.map((entry) =>
+          entry.id === order.id
+            ? {
+                ...entry,
+                ...updated,
+              }
+            : entry
+        )
+      );
+    } catch (err: any) {
+      Alert.alert('Unable to update order', err.message || 'Please try again.');
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -1231,6 +1394,8 @@ export default function Dashboard() {
         title: banner.title.trim(),
         ctaLabel: banner.ctaLabel.trim(),
         accentText: banner.accentText.trim(),
+        durationHours: banner.durationHours,
+        endsAt: banner.endsAt,
         imageUrl: banner.imageUri
           ? await imageUploadService.uploadToCloudinary({
               uri: banner.imageUri,
@@ -1260,31 +1425,238 @@ export default function Dashboard() {
               <Ionicons name="log-out-outline" size={18} color={TEXT_PRIMARY} />
               <Text style={styles.logoutBtnText}>Logout</Text>
             </TouchableOpacity>
+            {activeSection === 'menu' && (
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={() => {
+                  setEditingProduct(null);
+                  setModalVisible(true);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={styles.addBtnText}>Add Item</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.sectionNav}>
+          {ADMIN_SECTIONS.map((section) => (
             <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => {
-                setEditingProduct(null);
-                setModalVisible(true);
-              }}
+              key={section.key}
+              style={[styles.sectionNavItem, activeSection === section.key && styles.sectionNavItemActive]}
+              onPress={() => setActiveSection(section.key)}
               activeOpacity={0.85}
             >
-              <Ionicons name="add" size={20} color="#fff" />
-              <Text style={styles.addBtnText}>Add Item</Text>
+              <Ionicons
+                name={section.icon}
+                size={16}
+                color={activeSection === section.key ? TEAL : TEXT_SECONDARY}
+              />
+              <Text style={[styles.sectionNavText, activeSection === section.key && styles.sectionNavTextActive]}>
+                {section.label}
+              </Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
 
         {loading ? (
           <DashboardSkeleton />
         ) : (
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }} stickyHeaderIndices={[4]}>
-            <View style={styles.statsRow}>
-              <StatCard label="Total Items" value={totalItems} color={TEAL} />
-              <StatCard label="Available" value={available} color={TEAL_MID} />
-              <StatCard label="Featured" value={featured} color={CORAL} />
-            </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {activeSection === 'orders' && (
+              <>
+                <View style={styles.ordersHeader}>
+                  <View>
+                    <Text style={styles.sectionHeading}>Incoming Orders</Text>
+                    <Text style={styles.sectionCaption}>Track new checkouts and move each order through fulfillment.</Text>
+                  </View>
+                  <TouchableOpacity style={styles.refreshBtn} onPress={() => loadOrders()} activeOpacity={0.85}>
+                    <Ionicons name="refresh" size={16} color={TEAL} />
+                    <Text style={styles.refreshBtnText}>Refresh</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View style={styles.listSection}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.orderFilterRow}>
+                  {ORDER_FILTERS.map((filter) => (
+                    <CategoryPill
+                      key={filter.label}
+                      cat={filter.label}
+                      selected={orderFilter === filter.value}
+                      onPress={() => handleChangeOrderFilter(filter.value)}
+                    />
+                  ))}
+                </ScrollView>
+
+                {ordersLoading ? (
+                  <View style={styles.ordersLoading}>
+                    <ActivityIndicator color={TEAL} />
+                    <Text style={styles.loadingText}>Loading orders...</Text>
+                  </View>
+                ) : orders.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyEmoji}>🧾</Text>
+                    <Text style={styles.emptyTitle}>No matching orders</Text>
+                    <Text style={styles.emptyBody}>New customer checkouts will appear here automatically.</Text>
+                  </View>
+                ) : (
+                  <View style={styles.ordersList}>
+                    {orders.map((order) => (
+                      <View key={order.id} style={styles.orderCard}>
+                        <View style={styles.orderCardHeader}>
+                          <View>
+                            <Text style={styles.orderNumber}>Order #{order.orderNumber}</Text>
+                            <Text style={styles.orderMeta}>{formatPlacedAt(order.placedAt)}</Text>
+                          </View>
+                          <View style={[styles.orderStatusPill, getOrderStatusStyle(order.status)]}>
+                            <Text style={styles.orderStatusText}>{ORDER_STATUS_LABELS[order.status]}</Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.orderAddressRow}>
+                          <Ionicons
+                            name={order.deliveryStreet || order.deliveryCity ? 'location-outline' : 'bag-handle-outline'}
+                            size={16}
+                            color={TEXT_SECONDARY}
+                          />
+                          <Text style={styles.orderAddressText}>
+                            {order.deliveryStreet || order.deliveryCity
+                              ? [order.deliveryStreet, order.deliveryBarangay, order.deliveryCity]
+                                  .filter(Boolean)
+                                  .join(', ')
+                              : 'Pickup order'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.orderItemsWrap}>
+                          {order.items.map((item) => (
+                            <View key={item.id} style={styles.orderItemRow}>
+                              <Text style={styles.orderItemQty}>{item.quantity}x</Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.orderItemName}>{item.itemName}</Text>
+                                {item.options.length > 0 && (
+                                  <Text style={styles.orderItemOptions}>
+                                    {item.options.map((option) => option.choiceName).join(', ')}
+                                  </Text>
+                                )}
+                              </View>
+                              <Text style={styles.orderItemSubtotal}>{formatPeso(item.subtotal)}</Text>
+                            </View>
+                          ))}
+                        </View>
+
+                        <View style={styles.orderFooter}>
+                          <View>
+                            <Text style={styles.orderTotalLabel}>Total</Text>
+                            <Text style={styles.orderTotalValue}>{formatPeso(order.totalAmount)}</Text>
+                          </View>
+
+                          <View style={styles.orderActions}>
+                            {(NEXT_ORDER_STATUSES[order.status] ?? []).map((status) => (
+                              <TouchableOpacity
+                                key={status}
+                                style={[
+                                  styles.orderActionBtn,
+                                  status === 'cancelled' && styles.orderActionBtnDanger,
+                                ]}
+                                onPress={() => handleAdvanceOrderStatus(order, status)}
+                                disabled={updatingOrderId === order.id}
+                                activeOpacity={0.85}
+                              >
+                                {updatingOrderId === order.id ? (
+                                  <ActivityIndicator size="small" color={status === 'cancelled' ? CORAL : '#fff'} />
+                                ) : (
+                                  <Text
+                                    style={[
+                                      styles.orderActionBtnText,
+                                      status === 'cancelled' && styles.orderActionBtnDangerText,
+                                    ]}
+                                  >
+                                    {ORDER_STATUS_LABELS[status]}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+
+            {activeSection === 'menu' && (
+              <>
+                <View style={styles.statsRow}>
+                  <StatCard label="Total Items" value={totalItems} color={TEAL} />
+                  <StatCard label="Available" value={available} color={TEAL_MID} />
+                  <StatCard label="Featured" value={featured} color={CORAL} />
+                </View>
+
+                <View style={styles.stickySection}>
+                  <View style={styles.searchWrap}>
+                    <FontAwesome6 name="magnifying-glass" size={14} color={TEXT_SECONDARY} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search items..."
+                      placeholderTextColor={TEXT_SECONDARY}
+                      value={search}
+                      onChangeText={setSearch}
+                    />
+                    {search.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearch('')}>
+                        <Ionicons name="close-circle" size={16} color={TEXT_SECONDARY} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
+                    {categoryFilters.map((cat) => (
+                      <CategoryPill
+                        key={cat}
+                        cat={cat}
+                        selected={filterCat === cat}
+                        onPress={() => setFilterCat(cat)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+
+                <View style={styles.listSection}>
+                  <Text style={styles.sectionTitle}>
+                    {filtered.length} {filtered.length === 1 ? 'item' : 'items'}
+                    {filterCat !== 'All' ? ` · ${filterCat}` : ''}
+                  </Text>
+
+                  {filtered.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyEmoji}>🌊</Text>
+                      <Text style={styles.emptyTitle}>No items yet</Text>
+                      <Text style={styles.emptyBody}>Tap "Add Item" to start building your menu.</Text>
+                    </View>
+                  ) : (
+                    filtered.map((item) => (
+                      <ProductRow
+                        key={item.id}
+                        item={item}
+                        onEdit={(product) => {
+                          setEditingProduct(product);
+                          setModalVisible(true);
+                        }}
+                        onToggleAvailable={toggleAvailable}
+                        onToggleFeatured={toggleFeatured}
+                        onDelete={deleteProduct}
+                      />
+                    ))
+                  )}
+                </View>
+              </>
+            )}
+
+            {activeSection === 'home' && (
+              <>
+                <View style={styles.listSection}>
               <View style={styles.categoryHeaderRow}>
                 <Text style={styles.sectionTitle}>Top Banner</Text>
                 <TouchableOpacity
@@ -1319,7 +1691,7 @@ export default function Dashboard() {
               </View>
             </View>
 
-            <View style={styles.listSection}>
+                <View style={styles.listSection}>
               <View style={styles.categoryHeaderRow}>
                 <Text style={styles.sectionTitle}>Home Slider</Text>
                 <TouchableOpacity
@@ -1350,8 +1722,11 @@ export default function Dashboard() {
                 ))}
               </View>
             </View>
+              </>
+            )}
 
-            <View style={styles.listSection}>
+            {activeSection === 'categories' && (
+              <View style={styles.listSection}>
               <View style={styles.categoryHeaderRow}>
                 <Text style={styles.sectionTitle}>Categories</Text>
                 <TouchableOpacity
@@ -1397,63 +1772,7 @@ export default function Dashboard() {
                 </View>
               ))}
             </View>
-
-            <View style={styles.stickySection}>
-              <View style={styles.searchWrap}>
-                <FontAwesome6 name="magnifying-glass" size={14} color={TEXT_SECONDARY} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search items..."
-                  placeholderTextColor={TEXT_SECONDARY}
-                  value={search}
-                  onChangeText={setSearch}
-                />
-                {search.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearch('')}>
-                    <Ionicons name="close-circle" size={16} color={TEXT_SECONDARY} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
-                {categoryFilters.map((cat) => (
-                  <CategoryPill
-                    key={cat}
-                    cat={cat}
-                    selected={filterCat === cat}
-                    onPress={() => setFilterCat(cat)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.listSection}>
-              <Text style={styles.sectionTitle}>
-                {filtered.length} {filtered.length === 1 ? 'item' : 'items'}
-                {filterCat !== 'All' ? ` · ${filterCat}` : ''}
-              </Text>
-
-              {filtered.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyEmoji}>🌊</Text>
-                  <Text style={styles.emptyTitle}>No items yet</Text>
-                  <Text style={styles.emptyBody}>Tap "Add Item" to start building your menu.</Text>
-                </View>
-              ) : (
-                filtered.map((item) => (
-                  <ProductRow
-                    key={item.id}
-                    item={item}
-                    onEdit={(product) => {
-                      setEditingProduct(product);
-                      setModalVisible(true);
-                    }}
-                    onToggleAvailable={toggleAvailable}
-                    onToggleFeatured={toggleFeatured}
-                    onDelete={deleteProduct}
-                  />
-                ))
-              )}
-            </View>
+            )}
           </ScrollView>
         )}
       </SafeAreaView>
@@ -1516,6 +1835,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  sectionNav: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: GRAY_BORDER,
+  },
+  sectionNavItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    backgroundColor: '#fff',
+  },
+  sectionNavItemActive: {
+    backgroundColor: TEAL_LIGHT,
+    borderColor: TEAL_MID,
+  },
+  sectionNavText: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  sectionNavTextActive: {
+    color: TEAL,
+  },
   brandName: { fontSize: 22, fontWeight: '700', color: TEAL, letterSpacing: -0.5 },
   brandSub: { fontSize: 12, color: TEXT_SECONDARY, marginTop: 1 },
   logoutBtn: {
@@ -1554,6 +1906,199 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: TEXT_SECONDARY,
+  },
+  ordersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 18,
+  },
+  sectionHeading: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: TEXT_PRIMARY,
+  },
+  sectionCaption: {
+    maxWidth: 240,
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: TEAL_MID,
+    backgroundColor: '#fff',
+  },
+  refreshBtnText: {
+    color: TEAL,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  orderFilterRow: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  ordersLoading: {
+    minHeight: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  ordersList: {
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    gap: 12,
+  },
+  orderCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    backgroundColor: '#fff',
+    padding: 16,
+    gap: 14,
+  },
+  orderCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  orderNumber: {
+    color: TEXT_PRIMARY,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  orderMeta: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  orderStatusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  orderStatusActive: {
+    backgroundColor: '#FFF1D9',
+  },
+  orderStatusReady: {
+    backgroundColor: '#DFF7EE',
+  },
+  orderStatusTransit: {
+    backgroundColor: '#E5F0FF',
+  },
+  orderStatusDelivered: {
+    backgroundColor: '#DFF7EE',
+  },
+  orderStatusCancelled: {
+    backgroundColor: '#FCE7E3',
+  },
+  orderStatusText: {
+    color: TEXT_PRIMARY,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  orderAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  orderAddressText: {
+    flex: 1,
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  orderItemsWrap: {
+    gap: 10,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: GRAY_BORDER,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  orderItemQty: {
+    width: 24,
+    color: TEAL,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  orderItemName: {
+    color: TEXT_PRIMARY,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  orderItemOptions: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  orderItemSubtotal: {
+    color: TEXT_PRIMARY,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: GRAY_BORDER,
+  },
+  orderTotalLabel: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+  },
+  orderTotalValue: {
+    color: TEXT_PRIMARY,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  orderActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 8,
+    flex: 1,
+  },
+  orderActionBtn: {
+    minWidth: 94,
+    minHeight: 38,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: TEAL,
+    paddingHorizontal: 14,
+  },
+  orderActionBtnDanger: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: CORAL,
+  },
+  orderActionBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  orderActionBtnDangerText: {
+    color: CORAL,
   },
 
   statsRow: {
@@ -1861,6 +2406,39 @@ const styles = StyleSheet.create({
   },
   promoEditorStatField: {
     flex: 1,
+  },
+  bannerDurationRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  bannerDurationChip: {
+    flex: 1,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: GRAY_BORDER,
+    backgroundColor: GRAY_BG,
+  },
+  bannerDurationChipSelected: {
+    borderColor: TEAL,
+    backgroundColor: TEAL_LIGHT,
+  },
+  bannerDurationText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  bannerDurationTextSelected: {
+    color: TEAL,
+  },
+  bannerDurationHint: {
+    color: TEXT_SECONDARY,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
   },
   imagePicker: {
     alignSelf: 'center',

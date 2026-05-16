@@ -1,0 +1,20 @@
+[
+  {
+    "id": "faq-ordering",
+    "title": "Frequently Asked Questions",
+    "category": "faq",
+    "content": "Customers can browse available menu items, add items to the cart, choose pickup or delivery at checkout, and place an order through the SeaTachys app. Pickup orders do not require a delivery address. Delivery orders require a complete and accurate address. If an item is unavailable before checkout, it should not be offered as available. If a customer needs help with an active order, they should check the order status page first because it contains the latest store-updated progress."
+  },
+  {
+    "id": "refund-policy",
+    "title": "Refund Policy",
+    "category": "refund_policy",
+    "content": "SeaTachys may provide a full refund if the store cancels an order, if payment was taken for an order the store cannot fulfill, or if the customer cancels before the store confirms the order. Once an order is already being prepared, change-of-mind cancellations are normally not refundable. If food arrives missing, incorrect, or materially damaged, the customer should report the issue within 24 hours with order details and clear evidence so the store can review a partial refund, replacement, or store credit. Refunds are reviewed case by case and are returned through the original payment method when possible."
+  },
+  {
+    "id": "delivery-rules",
+    "title": "Delivery Rules",
+    "category": "delivery_rules",
+    "content": "Delivery estimates are not guaranteed arrival times because traffic, weather, rider availability, and store volume can affect travel. Customers should provide a complete address, a reachable phone number, and any useful landmarks or instructions before checkout. The rider may contact the customer when nearing the destination. If the customer cannot be reached after a reasonable waiting period, delivery may be delayed or returned according to store policy. Pickup orders are collected by the customer and do not include a delivery fee."
+  }
+]

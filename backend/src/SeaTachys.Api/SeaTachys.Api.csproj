@@ -18,4 +18,8 @@
     <ProjectReference Include="..\SeaTachys.Infrastructure\SeaTachys.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="KnowledgeBase\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

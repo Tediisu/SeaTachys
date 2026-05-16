@@ -8,7 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import Button from '@/components/ui/Button';
 import { useCart } from '@/hooks/use-cart';
 import { FontSize } from '@/constants/theme';
-import { ordersService, type OrderQuoteResponse } from '@/services/orders.services';
+import { ordersService, type FulfillmentType, type OrderQuoteResponse } from '@/services/orders.services';
 import { QuoteSummarySkeleton } from '@/components/ui/SkeletonScreens';
 
 const paymentMethods = [
@@ -26,6 +26,7 @@ export default function CheckoutScreen() {
   const [city, setCity] = useState('');
   const [customerNote, setCustomerNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
+  const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('delivery');
   const [quote, setQuote] = useState<OrderQuoteResponse | null>(null);
   const [loadingQuote, setLoadingQuote] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -49,7 +50,7 @@ export default function CheckoutScreen() {
       }
 
       try {
-        const data = await ordersService.quote(quoteItems);
+        const data = await ordersService.quote(quoteItems, fulfillmentType);
         setQuote(data);
       } catch (err: any) {
         Alert.alert('Unable to calculate totals', err.message || 'Please try again.');
@@ -59,10 +60,10 @@ export default function CheckoutScreen() {
     };
 
     loadQuote();
-  }, [items, quoteItems]);
+  }, [fulfillmentType, items, quoteItems]);
 
   const handlePlaceOrder = async () => {
-    if (!street.trim() || !city.trim()) {
+    if (fulfillmentType === 'delivery' && (!street.trim() || !city.trim())) {
       Alert.alert('Missing address', 'Please enter your street and city.');
       return;
     }
@@ -76,9 +77,10 @@ export default function CheckoutScreen() {
 
     try {
       const response = await ordersService.create({
-        deliveryStreet: street.trim(),
-        deliveryBarangay: barangay.trim(),
-        deliveryCity: city.trim(),
+        fulfillmentType,
+        deliveryStreet: fulfillmentType === 'delivery' ? street.trim() : '',
+        deliveryBarangay: fulfillmentType === 'delivery' ? barangay.trim() : '',
+        deliveryCity: fulfillmentType === 'delivery' ? city.trim() : '',
         customerNote: customerNote.trim()
           ? `${customerNote.trim()} | Payment: ${paymentMethod}`
           : `Payment: ${paymentMethod}`,
@@ -86,11 +88,7 @@ export default function CheckoutScreen() {
       });
 
       clearCart();
-      Alert.alert(
-        'Order placed',
-        `Order ${response.orderNumber} was created successfully.`,
-        [{ text: 'OK', onPress: () => router.replace('/(user)/Home') }]
-      );
+      router.replace(`/(user)/order/${response.id}`);
     } catch (err: any) {
       Alert.alert('Unable to place order', err.message || 'Please try again.');
     } finally {
@@ -114,30 +112,65 @@ export default function CheckoutScreen() {
             <ThemedText style={styles.title}>Checkout</ThemedText>
           </View>
 
-          <View style={styles.card}>
-            <ThemedText style={styles.sectionTitle}>Delivery Address</ThemedText>
-            <TextInput
-              style={styles.input}
-              placeholder="Street address"
-              placeholderTextColor="#6B7280"
-              value={street}
-              onChangeText={setStreet}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Barangay / Area"
-              placeholderTextColor="#6B7280"
-              value={barangay}
-              onChangeText={setBarangay}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="City"
-              placeholderTextColor="#6B7280"
-              value={city}
-              onChangeText={setCity}
-            />
+          <View style={styles.fulfillmentSection}>
+            <ThemedText style={styles.sectionTitle}>How would you like to receive it?</ThemedText>
+            <View style={styles.fulfillmentTabs}>
+              {([
+                { id: 'delivery', label: 'Delivery', icon: 'bicycle-outline' },
+                { id: 'pickup', label: 'Pickup', icon: 'bag-handle-outline' },
+              ] as const).map((option) => {
+                const selected = fulfillmentType === option.id;
+                return (
+                  <Pressable
+                    key={option.id}
+                    style={[styles.fulfillmentTab, selected && styles.fulfillmentTabSelected]}
+                    onPress={() => setFulfillmentType(option.id)}
+                  >
+                    <Ionicons
+                      name={option.icon}
+                      size={18}
+                      color={selected ? '#FFFFFF' : '#0F2F57'}
+                    />
+                    <ThemedText style={[styles.fulfillmentTabText, selected && styles.fulfillmentTabTextSelected]}>
+                      {option.label}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <ThemedText style={styles.fulfillmentHint}>
+              {fulfillmentType === 'delivery'
+                ? 'We will bring the order to your address.'
+                : 'Pick up from the store once your order is ready.'}
+            </ThemedText>
           </View>
+
+          {fulfillmentType === 'delivery' ? (
+            <View style={styles.card}>
+              <ThemedText style={styles.sectionTitle}>Delivery Address</ThemedText>
+              <TextInput
+                style={styles.input}
+                placeholder="Street address"
+                placeholderTextColor="#6B7280"
+                value={street}
+                onChangeText={setStreet}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Barangay / Area"
+                placeholderTextColor="#6B7280"
+                value={barangay}
+                onChangeText={setBarangay}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="City"
+                placeholderTextColor="#6B7280"
+                value={city}
+                onChangeText={setCity}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.card}>
             <ThemedText style={styles.sectionTitle}>Payment Method</ThemedText>
@@ -187,7 +220,9 @@ export default function CheckoutScreen() {
                   <ThemedText style={styles.summaryValue}>P{(quote?.subtotal ?? subtotal).toFixed(2)}</ThemedText>
                 </View>
                 <View style={styles.summaryRow}>
-                  <ThemedText style={styles.summaryLabel}>Delivery Fee</ThemedText>
+                  <ThemedText style={styles.summaryLabel}>
+                    {fulfillmentType === 'delivery' ? 'Delivery Fee' : 'Pickup Fee'}
+                  </ThemedText>
                   <ThemedText style={styles.summaryValue}>P{(quote?.deliveryFee ?? 0).toFixed(2)}</ThemedText>
                 </View>
                 <View style={styles.summaryRow}>
@@ -241,6 +276,41 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 18,
     gap: 12,
+  },
+  fulfillmentSection: {
+    gap: 10,
+  },
+  fulfillmentTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 18,
+    padding: 4,
+    gap: 4,
+  },
+  fulfillmentTab: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  fulfillmentTabSelected: {
+    backgroundColor: '#0F2F57',
+  },
+  fulfillmentTabText: {
+    color: '#0F2F57',
+    fontSize: FontSize.body,
+    fontWeight: '800',
+  },
+  fulfillmentTabTextSelected: {
+    color: '#FFFFFF',
+  },
+  fulfillmentHint: {
+    color: '#6B7280',
+    fontSize: FontSize.xs,
+    lineHeight: 18,
   },
   sectionTitle: {
     color: '#111827',

@@ -77,6 +77,20 @@ export default function UserLayout() {
         }}
       />
       <Tabs.Screen
+        name="Orders"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="order/[id]"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
         name="product/[id]"
         options={{
           href: null,
@@ -92,6 +106,13 @@ export default function UserLayout() {
       />
       <Tabs.Screen
         name="ChangePassword"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+        }}
+      />
+      <Tabs.Screen
+        name="Assistant"
         options={{
           href: null,
           tabBarStyle: { display: 'none' },

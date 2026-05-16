@@ -44,6 +44,8 @@ export type HomeTopBanner = {
   ctaLabel: string;
   accentText: string;
   imageUrl?: string | null;
+  durationHours?: number | null;
+  endsAt?: string | null;
 };
 
 export const homePromoService = {

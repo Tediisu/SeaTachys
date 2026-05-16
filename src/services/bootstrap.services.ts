@@ -96,33 +96,48 @@ export const bootstrapService = {
   refreshAdminData: async (): Promise<CachedBootstrap<AdminBootstrapData>> => {
     const cached = await readCachedValue<AdminBootstrapData>(ADMIN_BOOTSTRAP_KEY);
 
-    const categories = await adminMenuService
-      .getCategories()
-      .catch((error) => {
-        console.log('Admin categories refresh failed:', error);
-        return cached?.data.categories ?? [];
-      });
+    const [categoriesResult, itemsResult, promosResult, bannerResult] = await Promise.allSettled([
+      adminMenuService.getCategories(),
+      adminMenuService.getItems(),
+      homePromoService.getAdminPromos(),
+      homePromoService.getAdminBanner(),
+    ]);
 
-    const items = await adminMenuService
-      .getItems()
-      .catch((error) => {
-        console.log('Admin items refresh failed:', error);
-        return cached?.data.items ?? [];
-      });
+    if (categoriesResult.status === 'rejected') {
+      console.log('Admin categories refresh failed:', categoriesResult.reason);
+    }
 
-    const promos = await homePromoService
-      .getAdminPromos()
-      .catch((error) => {
-        console.log('Admin promos refresh failed:', error);
-        return cached?.data.promos ?? [] as HomePromoSlide[];
-      });
+    if (itemsResult.status === 'rejected') {
+      console.log('Admin items refresh failed:', itemsResult.reason);
+    }
 
-    const banner = await homePromoService
-      .getAdminBanner()
-      .catch((error) => {
-        console.log('Admin banner refresh failed:', error);
-        return cached?.data.banner ?? null;
-      });
+    if (promosResult.status === 'rejected') {
+      console.log('Admin promos refresh failed:', promosResult.reason);
+    }
+
+    if (bannerResult.status === 'rejected') {
+      console.log('Admin banner refresh failed:', bannerResult.reason);
+    }
+
+    const categories =
+      categoriesResult.status === 'fulfilled'
+        ? categoriesResult.value
+        : cached?.data.categories ?? [];
+
+    const items =
+      itemsResult.status === 'fulfilled'
+        ? itemsResult.value
+        : cached?.data.items ?? [];
+
+    const promos =
+      promosResult.status === 'fulfilled'
+        ? promosResult.value
+        : cached?.data.promos ?? [] as HomePromoSlide[];
+
+    const banner =
+      bannerResult.status === 'fulfilled'
+        ? bannerResult.value
+        : cached?.data.banner ?? null;
 
     return await writeCachedValue(ADMIN_BOOTSTRAP_KEY, {
       categories,

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SeaTachys.Domain.Entities;
 using SeaTachys.Domain.Enums;
 using SeaTachys.Infrastructure.Persistence;
@@ -15,11 +16,13 @@ public class OrdersController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly IConfiguration _cfg;
+    private readonly DatabaseConnectionString _databaseConnectionString;
 
-    public OrdersController(AppDbContext db, IConfiguration cfg)
+    public OrdersController(AppDbContext db, IConfiguration cfg, DatabaseConnectionString databaseConnectionString)
     {
         _db = db;
         _cfg = cfg;
+        _databaseConnectionString = databaseConnectionString;
     }
 
     [HttpPost("quote")]
@@ -28,7 +31,7 @@ public class OrdersController : ControllerBase
         if (req.Items == null || req.Items.Count == 0)
             return BadRequest("Order must have at least one item.");
 
-        var quote = await BuildQuote(req.Items);
+        var quote = await BuildQuote(req.Items, req.FulfillmentType);
         if (quote.Error != null) return BadRequest(quote.Error);
 
         return Ok(new
@@ -51,13 +54,17 @@ public class OrdersController : ControllerBase
 
         var userId = Guid.Parse(userIdStr);
 
+        var isPickup = IsPickup(req.FulfillmentType);
+        if (!isPickup && (string.IsNullOrWhiteSpace(req.DeliveryStreet) || string.IsNullOrWhiteSpace(req.DeliveryCity)))
+            return BadRequest("Delivery orders require a street and city.");
+
         var order = new Order
         {
             CustomerId = userId,
             Status = OrderStatus.pending,
-            DeliveryStreet = req.DeliveryStreet,
-            DeliveryBarangay = req.DeliveryBarangay,
-            DeliveryCity = req.DeliveryCity,
+            DeliveryStreet = isPickup ? string.Empty : req.DeliveryStreet,
+            DeliveryBarangay = isPickup ? null : req.DeliveryBarangay,
+            DeliveryCity = isPickup ? string.Empty : req.DeliveryCity,
             DeliveryLat = req.DeliveryLat,
             DeliveryLng = req.DeliveryLng,
             CustomerNote = req.CustomerNote,
@@ -65,7 +72,7 @@ public class OrdersController : ControllerBase
             UpdatedAt = DateTimeOffset.UtcNow
         };
 
-        var quote = await BuildQuote(req.Items);
+        var quote = await BuildQuote(req.Items, req.FulfillmentType);
         if (quote.Error != null) return BadRequest(quote.Error);
 
         foreach (var preparedItem in quote.PreparedItems)
@@ -119,62 +126,38 @@ public class OrdersController : ControllerBase
         if (string.IsNullOrWhiteSpace(userIdStr)) return Unauthorized();
 
         var userId = Guid.Parse(userIdStr);
-
-        var orders = await _db.Orders
-        .Where(o => o.CustomerId == userId)
-        .OrderByDescending(o => o.PlacedAt)
-        .Select(o => new
-        {
-            o.Id,
-            o.OrderNumber,
-            o.Status,
-            o.Subtotal,
-            o.DeliveryFee,
-            o.DiscountAmount,
-            o.TotalAmount,
-            o.DeliveryStreet,
-            o.DeliveryBarangay,
-            o.DeliveryCity,
-            o.DeliveryLat,
-            o.DeliveryLng,
-            o.CustomerNote,
-            o.PlacedAt,
-            o.ConfirmedAt,
-            o.ReadyAt,
-            o.PickedUpAt,
-            o.DeliveredAt,
-            o.CancelledAt,
-            Items = o.Items.Select(i => new
-            {
-                i.Id,
-                i.MenuItemId,
-                i.ItemName,
-                i.UnitPrice,
-                i.Quantity,
-                i.Subtotal,
-                i.SpecialInstructions,
-                Options = i.Options.Select(opt => new
-                {
-                    opt.GroupLabel,
-                    opt.ChoiceName,
-                    opt.AdditionalPrice
-                })
-            })
-        })
-        .ToListAsync();
-
-        return Ok(orders);
+        return Ok(await CustomerOrderStore.GetOrdersAsync(
+            _databaseConnectionString.Value,
+            userId,
+            HttpContext.RequestAborted
+        ));
     }
 
-    private async Task<QuoteBuildResult> BuildQuote(List<CreateOrderItemRequest> items)
+    [HttpGet("{orderId:guid}")]
+    public async Task<IActionResult> GetById(Guid orderId)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrWhiteSpace(userIdStr)) return Unauthorized();
+
+        var order = await CustomerOrderStore.GetOrderAsync(
+            _databaseConnectionString.Value,
+            Guid.Parse(userIdStr),
+            orderId,
+            HttpContext.RequestAborted
+        );
+
+        return order is null ? NotFound() : Ok(order);
+    }
+
+    private async Task<QuoteBuildResult> BuildQuote(List<CreateOrderItemRequest> items, string? fulfillmentType)
     {
         var itemIds = items.Select(i => i.MenuItemId).Distinct().ToList();
 
-        var menuItems = await _db.MenuItems
-            .Include(i => i.OptionGroups)
-                .ThenInclude(g => g.Choices)
-            .Where(i => itemIds.Contains(i.Id))
-            .ToListAsync();
+        var menuItems = await QuoteMenuReader.GetItemsAsync(
+            _databaseConnectionString.Value,
+            itemIds,
+            HttpContext.RequestAborted
+        );
 
         if (menuItems.Count != itemIds.Count)
             return QuoteBuildResult.Fail("One or more menu items were not found.");
@@ -239,16 +222,23 @@ public class OrdersController : ControllerBase
             ));
         }
 
-        var deliveryFee = _cfg.GetValue<decimal>("Pricing:DeliveryFee", 50m);
+        var deliveryFee = IsPickup(fulfillmentType)
+            ? 0m
+            : _cfg.GetValue<decimal>("Pricing:DeliveryFee", 50m);
         return QuoteBuildResult.Success(preparedItems, subtotal, deliveryFee);
     }
+
+    private static bool IsPickup(string? fulfillmentType) =>
+        string.Equals(fulfillmentType, "pickup", StringComparison.OrdinalIgnoreCase);
 }
 
 public record QuoteOrderRequest(
-    List<CreateOrderItemRequest> Items
+    List<CreateOrderItemRequest> Items,
+    string? FulfillmentType
 );
 
 public record CreateOrderRequest(
+    string? FulfillmentType,
     string DeliveryStreet,
     string? DeliveryBarangay,
     string DeliveryCity,
@@ -293,4 +283,399 @@ public record QuoteBuildResult(
     public static QuoteBuildResult Fail(string error) => new(false, error, new List<PreparedOrderItem>(), 0m, 0m, 0m);
     public static QuoteBuildResult Success(List<PreparedOrderItem> preparedItems, decimal subtotal, decimal deliveryFee)
         => new(true, null, preparedItems, subtotal, deliveryFee, subtotal + deliveryFee);
+}
+
+public record CustomerOrderOptionDto(
+    string GroupLabel,
+    string ChoiceName,
+    decimal AdditionalPrice
+);
+
+public record CustomerOrderItemDto(
+    Guid Id,
+    Guid MenuItemId,
+    string ItemName,
+    decimal UnitPrice,
+    int Quantity,
+    decimal Subtotal,
+    string? SpecialInstructions,
+    List<CustomerOrderOptionDto> Options
+);
+
+public record CustomerOrderDto(
+    Guid Id,
+    string OrderNumber,
+    Guid? RiderId,
+    OrderStatus Status,
+    string DeliveryStreet,
+    string? DeliveryBarangay,
+    string DeliveryCity,
+    decimal Subtotal,
+    decimal DeliveryFee,
+    decimal DiscountAmount,
+    decimal TotalAmount,
+    string? CustomerNote,
+    DateTimeOffset PlacedAt,
+    DateTimeOffset? ConfirmedAt,
+    DateTimeOffset? ReadyAt,
+    DateTimeOffset? PickedUpAt,
+    DateTimeOffset? DeliveredAt,
+    DateTimeOffset? CancelledAt,
+    DateTimeOffset UpdatedAt,
+    List<CustomerOrderItemDto> Items
+);
+
+internal static class CustomerOrderStore
+{
+    internal static async Task<List<CustomerOrderDto>> GetOrdersAsync(
+        string connectionString,
+        Guid customerId,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var connection = await OpenAsync(connectionString, cancellationToken);
+        var orders = await ReadOrdersAsync(connection, customerId, null, cancellationToken);
+        return await AttachItemsAsync(connection, orders, cancellationToken);
+    }
+
+    internal static async Task<CustomerOrderDto?> GetOrderAsync(
+        string connectionString,
+        Guid customerId,
+        Guid orderId,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var connection = await OpenAsync(connectionString, cancellationToken);
+        var orders = await ReadOrdersAsync(connection, customerId, orderId, cancellationToken);
+        return (await AttachItemsAsync(connection, orders, cancellationToken)).FirstOrDefault();
+    }
+
+    private static async Task<List<CustomerOrderDto>> ReadOrdersAsync(
+        NpgsqlConnection connection,
+        Guid customerId,
+        Guid? orderId,
+        CancellationToken cancellationToken
+    )
+    {
+        var sql = orderId is null
+            ? """
+            SELECT
+                id,
+                order_number,
+                rider_id,
+                status::text,
+                delivery_street,
+                delivery_barangay,
+                delivery_city,
+                subtotal,
+                delivery_fee,
+                discount_amount,
+                total_amount,
+                customer_note,
+                placed_at,
+                confirmed_at,
+                ready_at,
+                picked_up_at,
+                delivered_at,
+                cancelled_at,
+                updated_at
+            FROM orders
+            WHERE customer_id = @customer_id
+            ORDER BY placed_at DESC
+            """
+            : """
+            SELECT
+                id,
+                order_number,
+                rider_id,
+                status::text,
+                delivery_street,
+                delivery_barangay,
+                delivery_city,
+                subtotal,
+                delivery_fee,
+                discount_amount,
+                total_amount,
+                customer_note,
+                placed_at,
+                confirmed_at,
+                ready_at,
+                picked_up_at,
+                delivered_at,
+                cancelled_at,
+                updated_at
+            FROM orders
+            WHERE customer_id = @customer_id AND id = @order_id
+            ORDER BY placed_at DESC
+            """;
+
+        await using var command = CreateCommand(connection, sql);
+        command.Parameters.AddWithValue("customer_id", customerId);
+        if (orderId is not null)
+        {
+            command.Parameters.AddWithValue("order_id", orderId.Value);
+        }
+
+        var orders = new List<CustomerOrderDto>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            orders.Add(ReadOrder(reader));
+        }
+
+        return orders;
+    }
+
+    private static async Task<List<CustomerOrderDto>> AttachItemsAsync(
+        NpgsqlConnection connection,
+        List<CustomerOrderDto> orders,
+        CancellationToken cancellationToken
+    )
+    {
+        if (orders.Count == 0)
+        {
+            return orders;
+        }
+
+        var orderIds = orders.Select(order => order.Id).ToArray();
+        await using var command = CreateCommand(connection, """
+            SELECT
+                item.id,
+                item.order_id,
+                item.menu_item_id,
+                item.item_name,
+                item.unit_price,
+                item.quantity,
+                item.subtotal,
+                item.special_instructions,
+                option.group_label,
+                option.choice_name,
+                option.additional_price
+            FROM order_items AS item
+            LEFT JOIN order_item_options AS option ON option.order_item_id = item.id
+            WHERE item.order_id = ANY(@order_ids)
+            ORDER BY item.order_id, item.id, option.id
+            """);
+        command.Parameters.AddWithValue("order_ids", NpgsqlTypes.NpgsqlDbType.Array | NpgsqlTypes.NpgsqlDbType.Uuid, orderIds);
+
+        var itemsByOrder = new Dictionary<Guid, Dictionary<Guid, CustomerOrderItemDto>>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var itemId = reader.GetGuid(0);
+            var owningOrderId = reader.GetGuid(1);
+
+            if (!itemsByOrder.TryGetValue(owningOrderId, out var orderItems))
+            {
+                orderItems = new Dictionary<Guid, CustomerOrderItemDto>();
+                itemsByOrder[owningOrderId] = orderItems;
+            }
+
+            if (!orderItems.TryGetValue(itemId, out var item))
+            {
+                item = new CustomerOrderItemDto(
+                    itemId,
+                    reader.GetGuid(2),
+                    reader.GetString(3),
+                    reader.GetDecimal(4),
+                    reader.GetInt32(5),
+                    reader.GetDecimal(6),
+                    reader.IsDBNull(7) ? null : reader.GetString(7),
+                    []
+                );
+                orderItems[itemId] = item;
+            }
+
+            if (!reader.IsDBNull(8))
+            {
+                item.Options.Add(new CustomerOrderOptionDto(
+                    reader.GetString(8),
+                    reader.GetString(9),
+                    reader.GetDecimal(10)
+                ));
+            }
+        }
+
+        return orders
+            .Select(order => order with
+            {
+                Items = itemsByOrder.TryGetValue(order.Id, out var orderItems)
+                    ? orderItems.Values.ToList()
+                    : []
+            })
+            .ToList();
+    }
+
+    private static CustomerOrderDto ReadOrder(NpgsqlDataReader reader) =>
+        new(
+            reader.GetGuid(0),
+            reader.GetValue(1).ToString() ?? string.Empty,
+            reader.IsDBNull(2) ? null : reader.GetGuid(2),
+            Enum.Parse<OrderStatus>(reader.GetString(3), ignoreCase: true),
+            reader.GetString(4),
+            reader.IsDBNull(5) ? null : reader.GetString(5),
+            reader.GetString(6),
+            reader.GetDecimal(7),
+            reader.GetDecimal(8),
+            reader.GetDecimal(9),
+            reader.GetDecimal(10),
+            reader.IsDBNull(11) ? null : reader.GetString(11),
+            reader.GetFieldValue<DateTimeOffset>(12),
+            reader.IsDBNull(13) ? null : reader.GetFieldValue<DateTimeOffset>(13),
+            reader.IsDBNull(14) ? null : reader.GetFieldValue<DateTimeOffset>(14),
+            reader.IsDBNull(15) ? null : reader.GetFieldValue<DateTimeOffset>(15),
+            reader.IsDBNull(16) ? null : reader.GetFieldValue<DateTimeOffset>(16),
+            reader.IsDBNull(17) ? null : reader.GetFieldValue<DateTimeOffset>(17),
+            reader.GetFieldValue<DateTimeOffset>(18),
+            []
+        );
+
+    private static async Task<NpgsqlConnection> OpenAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Pooling = false,
+            Timeout = 5,
+            CommandTimeout = 8,
+            Multiplexing = false,
+            MaxAutoPrepare = 0
+        };
+
+        var connection = new NpgsqlConnection(connectionBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        return connection;
+    }
+
+    private static NpgsqlCommand CreateCommand(NpgsqlConnection connection, string text)
+    {
+        var command = connection.CreateCommand();
+        command.CommandTimeout = 8;
+        command.CommandText = text;
+        return command;
+    }
+}
+
+internal static class QuoteMenuReader
+{
+    internal static async Task<List<MenuItem>> GetItemsAsync(
+        string connectionString,
+        List<Guid> itemIds,
+        CancellationToken cancellationToken
+    )
+    {
+        var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Pooling = false,
+            Timeout = 5,
+            CommandTimeout = 8,
+            Multiplexing = false,
+            MaxAutoPrepare = 0
+        };
+
+        await using var connection = new NpgsqlConnection(connectionBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var items = new List<MenuItem>();
+        var itemsById = new Dictionary<Guid, MenuItem>();
+
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandTimeout = 8;
+            command.CommandText = """
+                SELECT id, category_id, name, description, price, image_url, is_available, is_featured, display_order
+                FROM menu_items
+                WHERE id = ANY(@ids)
+                """;
+            command.Parameters.AddWithValue("ids", itemIds.ToArray());
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var item = new MenuItem
+                {
+                    Id = reader.GetGuid(0),
+                    CategoryId = reader.IsDBNull(1) ? null : reader.GetGuid(1),
+                    Name = reader.GetString(2),
+                    Description = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    Price = reader.GetDecimal(4),
+                    ImageUrl = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    IsAvailable = reader.GetBoolean(6),
+                    IsFeatured = reader.GetBoolean(7),
+                    DisplayOrder = reader.GetInt32(8)
+                };
+
+                items.Add(item);
+                itemsById[item.Id] = item;
+            }
+        }
+
+        if (items.Count == 0)
+        {
+            return items;
+        }
+
+        var groupsById = new Dictionary<Guid, MenuItemOptionGroup>();
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandTimeout = 8;
+            command.CommandText = """
+                SELECT
+                    g.id,
+                    g.menu_item_id,
+                    g.label,
+                    g.is_required,
+                    g.max_selections,
+                    g.display_order,
+                    c.id,
+                    c.group_id,
+                    c.name,
+                    c.additional_price,
+                    c.is_available
+                FROM menu_item_option_groups AS g
+                LEFT JOIN menu_item_option_choices AS c
+                    ON c.group_id = g.id
+                WHERE g.menu_item_id = ANY(@ids)
+                ORDER BY g.display_order, g.id, c.id
+                """;
+            command.Parameters.AddWithValue("ids", itemIds.ToArray());
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var groupId = reader.GetGuid(0);
+                if (!groupsById.TryGetValue(groupId, out var group))
+                {
+                    group = new MenuItemOptionGroup
+                    {
+                        Id = groupId,
+                        MenuItemId = reader.GetGuid(1),
+                        Label = reader.GetString(2),
+                        IsRequired = reader.GetBoolean(3),
+                        MaxSelections = reader.GetInt32(4),
+                        DisplayOrder = reader.GetInt32(5)
+                    };
+                    groupsById[groupId] = group;
+
+                    if (itemsById.TryGetValue(group.MenuItemId, out var menuItem))
+                    {
+                        menuItem.OptionGroups.Add(group);
+                    }
+                }
+
+                if (!reader.IsDBNull(6))
+                {
+                    group.Choices.Add(new MenuItemOptionChoice
+                    {
+                        Id = reader.GetGuid(6),
+                        GroupId = reader.GetGuid(7),
+                        Name = reader.GetString(8),
+                        AdditionalPrice = reader.GetDecimal(9),
+                        IsAvailable = reader.GetBoolean(10)
+                    });
+                }
+            }
+        }
+
+        return items;
+    }
 }
