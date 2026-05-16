@@ -42,16 +42,21 @@ public class HomePromosController : ControllerBase
 public class HomeBannerController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly DatabaseConnectionString _databaseConnectionString;
 
-    public HomeBannerController(AppDbContext db)
+    public HomeBannerController(AppDbContext db, DatabaseConnectionString databaseConnectionString)
     {
         _db = db;
+        _databaseConnectionString = databaseConnectionString;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetBanner()
     {
-        var banner = await HomeTopBannerSettingsStore.ReadAsync(_db);
+        var banner = await HomeTopBannerSettingsStore.ReadAsync(
+            _databaseConnectionString.Value,
+            HttpContext.RequestAborted
+        );
         if (banner is not null)
         {
             return Ok(banner);
@@ -140,7 +145,10 @@ public class AdminHomeBannerController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetBanner()
     {
-        var banner = await HomeTopBannerSettingsStore.ReadAsync(_db);
+        var banner = await HomeTopBannerSettingsStore.ReadAsync(
+            _databaseConnectionString.Value,
+            HttpContext.RequestAborted
+        );
         if (banner is not null)
         {
             return Ok(banner);
@@ -190,7 +198,9 @@ public record HomeTopBannerDto(
     string Title,
     string CtaLabel,
     string AccentText,
-    string? ImageUrl
+    string? ImageUrl,
+    int? DurationHours,
+    DateTimeOffset? EndsAt
 );
 
 public record UpdateHomePromosRequest(List<HomePromoSlideDto> Slides);
@@ -306,13 +316,9 @@ internal static class HomeTopBannerSettingsStore
 {
     internal const string Key = "home_top_banner";
 
-    internal static async Task<HomeTopBannerDto?> ReadAsync(AppDbContext db)
+    internal static async Task<HomeTopBannerDto?> ReadAsync(string connectionString, CancellationToken cancellationToken)
     {
-        var raw = await db.StoreSettings
-            .AsNoTracking()
-            .Where(setting => setting.Key == Key)
-            .Select(setting => setting.Value)
-            .FirstOrDefaultAsync();
+        var raw = await StoreSettingReader.ReadValueAsync(connectionString, Key, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(raw))
         {
@@ -336,7 +342,9 @@ internal static class HomeTopBannerSettingsStore
             banner.Title.Trim(),
             banner.CtaLabel.Trim(),
             banner.AccentText.Trim(),
-            string.IsNullOrWhiteSpace(banner.ImageUrl) ? null : banner.ImageUrl.Trim()
+            string.IsNullOrWhiteSpace(banner.ImageUrl) ? null : banner.ImageUrl.Trim(),
+            banner.DurationHours is > 0 ? banner.DurationHours : null,
+            banner.EndsAt
         );
 
     internal static async Task<HomeTopBannerDto> BuildFallbackAsync(AppDbContext db)
@@ -346,8 +354,44 @@ internal static class HomeTopBannerSettingsStore
             "30% off 12-month plan",
             "Subscribe now!",
             "Premium",
+            null,
+            null,
             null
         );
+    }
+}
+
+internal static class StoreSettingReader
+{
+    internal static async Task<string?> ReadValueAsync(
+        string connectionString,
+        string key,
+        CancellationToken cancellationToken
+    )
+    {
+        var connectionBuilder = new NpgsqlConnectionStringBuilder(connectionString)
+        {
+            Pooling = false,
+            Timeout = 5,
+            CommandTimeout = 8,
+            Multiplexing = false,
+            MaxAutoPrepare = 0
+        };
+
+        await using var connection = new NpgsqlConnection(connectionBuilder.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 8;
+        command.CommandText = """
+            SELECT value
+            FROM store_settings
+            WHERE key = @key
+            LIMIT 1
+            """;
+        command.Parameters.AddWithValue("key", key);
+
+        return await command.ExecuteScalarAsync(cancellationToken) as string;
     }
 }
 

@@ -56,8 +56,27 @@ type TopBanner = {
   title: string;
   ctaLabel: string;
   accentText: string;
+  endsAt?: string | null;
   image: ImageSourcePropType | string | null;
 };
+
+function formatPromoCountdown(endsAt?: string | null, now = Date.now(), compact = false) {
+  if (!endsAt) return null;
+
+  const remainingMs = new Date(endsAt).getTime() - now;
+  if (!Number.isFinite(remainingMs)) return null;
+  if (remainingMs <= 0) return 'Promo ended';
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return compact ? `${days}d ${hours}h` : `${days}d ${hours}h left`;
+  if (hours > 0) return compact ? `${hours}h ${minutes}m` : `${hours}h ${minutes}m left`;
+  return compact ? `${minutes}m ${seconds}s` : `${minutes}m ${seconds}s left`;
+}
 
 export default function Home() {
   const colors = useTheme();
@@ -78,6 +97,7 @@ export default function Home() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [promoImageReady, setPromoImageReady] = useState<Record<string, boolean>>({});
   const [topBannerImageReady, setTopBannerImageReady] = useState(false);
+  const [countdownNow, setCountdownNow] = useState(Date.now());
 
   const ui = useMemo(() => {
     const isCompact = width < 390;
@@ -93,13 +113,13 @@ export default function Home() {
       contentWidth,
       cardWidth,
       heroPadding,
-      heroHeight: isCompact ? 256 : 274,
-      promoHeight: isCompact ? 154 : 164,
+      heroHeight: isCompact ? 292 : 308,
+      promoHeight: isCompact ? 188 : 198,
       heroSlideWidth: contentWidth - heroPadding * 2,
       topBannerHeight: isCompact ? 184 : 198,
-      topBannerCollapsedHeight: isCompact ? 60 : 64,
+      topBannerCollapsedHeight: isCompact ? 52 : 56,
       topPromoShellExpandedHeight: isCompact ? 234 : 248,
-      topPromoShellCollapsedHeight: isCompact ? 72 : 78,
+      topPromoShellCollapsedHeight: isCompact ? 64 : 68,
       topBannerImageSize: isCompact ? 92 : 104,
       topBannerTitleSize: isCompact ? 20 : 22,
       topBannerTitleLineHeight: isCompact ? 22 : 24,
@@ -140,17 +160,17 @@ export default function Home() {
   );
   const topBannerCardTranslateY = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [0, -10],
+    outputRange: [0, 0],
     extrapolate: 'clamp',
   });
   const topBannerShellPaddingBottom = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [10, 2],
+    outputRange: [10, 4],
     extrapolate: 'clamp',
   });
   const topBannerShellPaddingTop = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [2, 12],
+    outputRange: [2, 4],
     extrapolate: 'clamp',
   });
   const topBannerShellMarginBottom = scrollY.interpolate({
@@ -160,7 +180,7 @@ export default function Home() {
   });
   const topBannerContentTranslateY = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [0, -6],
+    outputRange: [0, 0],
     extrapolate: 'clamp',
   });
   const topPromoHeaderOpacity = scrollY.interpolate({
@@ -190,7 +210,7 @@ export default function Home() {
   });
   const topBannerLeadHeight = scrollY.interpolate({
     inputRange: [0, 70, bannerCollapseDistance],
-    outputRange: [112, 48, 0],
+    outputRange: [94, 42, 0],
     extrapolate: 'clamp',
   });
   const topBannerFooterOpacity = scrollY.interpolate({
@@ -200,12 +220,22 @@ export default function Home() {
   });
   const topBannerFooterMarginTop = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [14, 0],
+    outputRange: [8, 8],
     extrapolate: 'clamp',
   });
   const topBannerFooterTranslateY = scrollY.interpolate({
     inputRange: [0, bannerCollapseDistance],
-    outputRange: [0, -2],
+    outputRange: [0, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerExpandedCountdownOpacity = scrollY.interpolate({
+    inputRange: [0, 70, bannerCollapseDistance],
+    outputRange: [1, 0.2, 0],
+    extrapolate: 'clamp',
+  });
+  const topBannerCollapsedCountdownOpacity = scrollY.interpolate({
+    inputRange: [0, 70, bannerCollapseDistance],
+    outputRange: [0, 0.2, 1],
     extrapolate: 'clamp',
   });
   const topBannerImageOpacity = scrollY.interpolate({
@@ -388,6 +418,7 @@ export default function Home() {
         title: publicData.banner.title,
         ctaLabel: publicData.banner.ctaLabel,
         accentText: publicData.banner.accentText,
+        endsAt: publicData.banner.endsAt,
         image: publicData.banner.imageUrl ?? fallbackImage,
       };
     }
@@ -397,9 +428,26 @@ export default function Home() {
       title: '30% off 12-month plan',
       ctaLabel: 'Subscribe now!',
       accentText: 'Premium',
+      endsAt: null,
       image: fallbackImage,
     };
   }, [publicData.banner]);
+
+  const promoCountdown = useMemo(
+    () => formatPromoCountdown(topBanner.endsAt, countdownNow),
+    [countdownNow, topBanner.endsAt]
+  );
+  const compactPromoCountdown = useMemo(
+    () => formatPromoCountdown(topBanner.endsAt, countdownNow, true),
+    [countdownNow, topBanner.endsAt]
+  );
+
+  useEffect(() => {
+    if (!topBanner.endsAt) return;
+
+    const interval = setInterval(() => setCountdownNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [topBanner.endsAt]);
 
   useEffect(() => {
     setCurrentSlideIndex((prev) => Math.min(prev, Math.max(promoSlides.length - 1, 0)));
@@ -595,7 +643,21 @@ export default function Home() {
                           <ThemedText style={styles.topPromoBannerCtaText}>{topBanner.ctaLabel}</ThemedText>
                           <Ionicons name="arrow-forward-circle" size={18} color="#8B1874" />
                         </View>
-                        <ThemedText style={styles.topPromoBannerAccent}>{topBanner.accentText}</ThemedText>
+                        <ThemedText style={styles.topPromoBannerAccent} numberOfLines={1}>
+                          {topBanner.accentText}
+                        </ThemedText>
+                        {compactPromoCountdown ? (
+                          <Animated.View
+                            style={[
+                              styles.topPromoBannerCompactCountdown,
+                              { opacity: topBannerCollapsedCountdownOpacity },
+                            ]}>
+                            <Ionicons name="time-outline" size={13} color="#FFFFFF" />
+                            <ThemedText style={styles.topPromoBannerCompactCountdownText}>
+                              {compactPromoCountdown}
+                            </ThemedText>
+                          </Animated.View>
+                        ) : null}
                       </Animated.View>
                     </Animated.View>
 
@@ -631,6 +693,19 @@ export default function Home() {
                         {!topBannerImageReady ? <Skeleton style={styles.topPromoBannerImage} radius={24} /> : null}
                       </Animated.View>
                     </Animated.View>
+                    {promoCountdown ? (
+                      <Animated.View
+                        style={[
+                          styles.topPromoBannerCountdown,
+                          {
+                            opacity: topBannerExpandedCountdownOpacity,
+                            top: ui.topBannerImageSize + 24,
+                          },
+                        ]}>
+                        <Ionicons name="time-outline" size={13} color="#8B1874" />
+                        <ThemedText style={styles.topPromoBannerCountdownText}>{promoCountdown}</ThemedText>
+                      </Animated.View>
+                    ) : null}
                   </Animated.View>
                 </Animated.View>
               </Animated.View>
@@ -931,6 +1006,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 12,
+    position: 'relative',
   },
   topPromoBannerCopy: {
     flex: 1,
@@ -966,18 +1042,18 @@ const styles = StyleSheet.create({
   topPromoBannerFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
     marginTop: 14,
+    position: 'relative',
   },
   topPromoBannerCta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: '#FFFFFF',
     borderRadius: 999,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   topPromoBannerCtaText: {
     color: '#8B1874',
@@ -989,11 +1065,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     flexShrink: 1,
+    minWidth: 0,
+  },
+  topPromoBannerCompactCountdown: {
+    position: 'absolute',
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  topPromoBannerCompactCountdownText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '900',
   },
   topPromoBannerVisualLane: {
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
-    paddingTop: 24,
+    paddingTop: 12,
     paddingBottom: 0,
     overflow: 'hidden',
   },
@@ -1012,6 +1105,22 @@ const styles = StyleSheet.create({
   topPromoBannerImage: {
     width: '100%',
     height: '100%',
+  },
+  topPromoBannerCountdown: {
+    position: 'absolute',
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: '#FFFFFF',
+  },
+  topPromoBannerCountdownText: {
+    color: '#8B1874',
+    fontSize: 10,
+    fontWeight: '900',
   },
   heroCard: {
     borderRadius: 28,
@@ -1047,7 +1156,7 @@ const styles = StyleSheet.create({
     minHeight: 2,
   },
   promoSlider: {
-    marginTop: 18,
+    marginTop: 14,
     zIndex: 2,
   },
   promoSlide: {
@@ -1069,8 +1178,8 @@ const styles = StyleSheet.create({
   },
   promoCopy: {
     flex: 1,
-    paddingVertical: 12,
-    paddingRight: 12,
+    paddingVertical: 10,
+    paddingRight: 10,
     justifyContent: 'center',
   },
   promoBadge: {
@@ -1078,8 +1187,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,142,0,0.2)',
     borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 8,
+    paddingVertical: 4,
+    marginBottom: 6,
   },
   promoBadgeText: {
     color: '#FFDCA8',
@@ -1091,32 +1200,31 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     fontWeight: '800',
     letterSpacing: 0.9,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   promoTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: '900',
-    marginBottom: 6,
-    maxWidth: 168,
-    paddingTop: 2,
+    marginBottom: 4,
+    maxWidth: 188,
     flexShrink: 1,
   },
   promoSubtitle: {
     color: 'rgba(255,255,255,0.82)',
     fontSize: 12,
-    lineHeight: 18,
-    maxWidth: 152,
+    lineHeight: 16,
+    maxWidth: 184,
     flexShrink: 1,
   },
   promoStatPill: {
     alignSelf: 'flex-start',
-    marginTop: 12,
+    marginTop: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   promoStatLabel: {
     color: '#6B7280',
@@ -1129,8 +1237,8 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   promoImage: {
-    width: 128,
-    height: 136,
+    width: 124,
+    height: 150,
     marginRight: 8,
     borderRadius: 20,
   },

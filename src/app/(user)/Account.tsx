@@ -78,6 +78,12 @@ export default function AccountScreen() {
               onPress={() => router.push('/(user)/UserProfile')}
             />
             <AccountRow
+              icon={<Ionicons name="receipt-outline" size={18} color="#0F2F57" />}
+              label="My orders"
+              caption="Track active orders and review past orders"
+              onPress={() => router.push('/(user)/Orders')}
+            />
+            <AccountRow
               icon={<Feather name="map-pin" size={18} color="#0F6E56" />}
               label="Saved addresses"
               caption="Manage your delivery locations"
@@ -88,6 +94,12 @@ export default function AccountScreen() {
               label="Notifications"
               caption="Control order and promo alerts"
               onPress={() => Alert.alert('Coming soon', 'Notification preferences can be added next.')}
+            />
+            <AccountRow
+              icon={<Ionicons name="chatbubble-ellipses-outline" size={18} color="#8E1D70" />}
+              label="AI assistant"
+              caption="Ask about ordering, pickup, and app help"
+              onPress={() => router.push('/(user)/Assistant')}
             />
           </View>
 

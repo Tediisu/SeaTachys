@@ -20,6 +20,11 @@ builder.Services.AddControllers().AddJsonOptions(o =>
     o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient("ollama", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(builder.Configuration.GetValue("Ollama:TimeoutSeconds", 60));
+});
+builder.Services.AddSingleton<ChatbotKnowledgeService>();
 
 var connString = ResolveConnectionString(builder.Configuration);
 var jwtKey = builder.Configuration["Jwt:Key"];

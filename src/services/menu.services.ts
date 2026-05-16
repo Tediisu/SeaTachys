@@ -1,5 +1,7 @@
 import { apiFetch } from './api';
 
+const MENU_READ_TIMEOUT_MS = 30000;
+
 export type MenuCategoryDto = {
   id: string;
   name: string;
@@ -45,14 +47,14 @@ export type MenuItemDetailDto = MenuItemDto & {
 
 export const menuService = {
   getCategories: async () => {
-    return await apiFetch('/api/menu/categories', 'GET', undefined, false);
+    return await apiFetch('/api/menu/categories', 'GET', undefined, false, MENU_READ_TIMEOUT_MS);
   },
 
   getItems: async () => {
-    return await apiFetch('/api/menu/items', 'GET', undefined, false);
+    return await apiFetch('/api/menu/items', 'GET', undefined, false, MENU_READ_TIMEOUT_MS);
   },
 
   getItem: async (id: string) => {
-    return await apiFetch(`/api/menu/items/${id}`, 'GET', undefined, false);
+    return await apiFetch(`/api/menu/items/${id}`, 'GET', undefined, false, MENU_READ_TIMEOUT_MS);
   },
 };
