@@ -55,16 +55,24 @@ public class OrdersController : ControllerBase
         var userId = Guid.Parse(userIdStr);
 
         var isPickup = IsPickup(req.FulfillmentType);
-        if (!isPickup && (string.IsNullOrWhiteSpace(req.DeliveryStreet) || string.IsNullOrWhiteSpace(req.DeliveryCity)))
-            return BadRequest("Delivery orders require a street and city.");
+        var defaultAddress = isPickup
+            ? null
+            : await AddressStore.GetDefaultAsync(
+                _databaseConnectionString.Value,
+                userId,
+                HttpContext.RequestAborted
+            );
+        if (!isPickup && defaultAddress is null)
+            return BadRequest("Set a default address before placing a delivery order.");
 
         var order = new Order
         {
+            Id = Guid.CreateVersion7(),
             CustomerId = userId,
             Status = OrderStatus.pending,
-            DeliveryStreet = isPickup ? string.Empty : req.DeliveryStreet,
-            DeliveryBarangay = isPickup ? null : req.DeliveryBarangay,
-            DeliveryCity = isPickup ? string.Empty : req.DeliveryCity,
+            DeliveryStreet = isPickup ? string.Empty : defaultAddress!.Street,
+            DeliveryBarangay = isPickup ? null : defaultAddress!.Barangay,
+            DeliveryCity = isPickup ? string.Empty : defaultAddress!.City,
             DeliveryLat = req.DeliveryLat,
             DeliveryLng = req.DeliveryLng,
             CustomerNote = req.CustomerNote,
@@ -79,6 +87,7 @@ public class OrdersController : ControllerBase
         {
             var orderItem = new OrderItem
             {
+                Id = Guid.CreateVersion7(),
                 MenuItemId = preparedItem.MenuItemId,
                 ItemName = preparedItem.ItemName,
                 UnitPrice = preparedItem.UnitPrice,
@@ -91,6 +100,7 @@ public class OrdersController : ControllerBase
             {
                 orderItem.Options.Add(new OrderItemOption
                 {
+                    Id = Guid.CreateVersion7(),
                     GroupLabel = option.GroupLabel,
                     ChoiceName = option.ChoiceName,
                     AdditionalPrice = option.AdditionalPrice
@@ -106,7 +116,28 @@ public class OrdersController : ControllerBase
         order.TotalAmount = quote.TotalAmount;
 
         _db.Orders.Add(order);
-        await _db.SaveChangesAsync();
+
+        try
+        {
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsDuplicateOrderPrimaryKey(ex) || IsTransientOrderWriteTimeout(ex))
+        {
+            // A remote commit can succeed even when the acknowledgment is late or lost.
+            // Give PostgreSQL a brief moment to make that committed row visible before
+            // treating the checkout as failed.
+            _db.ChangeTracker.Clear();
+
+            var committedOrder = await TryGetCommittedOrderAsync(
+                _databaseConnectionString.Value,
+                order.Id,
+                HttpContext.RequestAborted
+            );
+            if (committedOrder is null)
+                throw;
+
+            order = committedOrder;
+        }
 
         return Ok(new
         {
@@ -228,6 +259,118 @@ public class OrdersController : ControllerBase
         return QuoteBuildResult.Success(preparedItems, subtotal, deliveryFee);
     }
 
+    private static bool IsDuplicateOrderPrimaryKey(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "orders_pkey"
+        };
+    }
+
+    private static async Task<Order?> TryGetCommittedOrderAsync(
+        string connectionString,
+        Guid orderId,
+        CancellationToken cancellationToken
+    )
+    {
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            var committedOrder = await ReadCommittedOrderAsync(connectionString, orderId, cancellationToken);
+
+            if (committedOrder is not null)
+                return committedOrder;
+
+            if (attempt < 3)
+                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+        }
+
+        return null;
+    }
+
+    private static async Task<Order?> ReadCommittedOrderAsync(
+        string connectionString,
+        Guid orderId,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = connection.CreateCommand();
+        command.CommandTimeout = 5;
+        command.CommandText = """
+            SELECT
+                id,
+                order_number,
+                customer_id,
+                rider_id,
+                status::text,
+                delivery_street,
+                delivery_barangay,
+                delivery_city,
+                delivery_lat,
+                delivery_lng,
+                subtotal,
+                delivery_fee,
+                discount_amount,
+                total_amount,
+                customer_note,
+                placed_at,
+                confirmed_at,
+                ready_at,
+                picked_up_at,
+                delivered_at,
+                cancelled_at,
+                updated_at
+            FROM orders
+            WHERE id = @id
+            LIMIT 1
+            """;
+        command.Parameters.AddWithValue("id", orderId);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+            return null;
+
+        return new Order
+        {
+            Id = reader.GetGuid(0),
+            OrderNumber = reader.GetString(1),
+            CustomerId = reader.GetGuid(2),
+            RiderId = reader.IsDBNull(3) ? null : reader.GetGuid(3),
+            Status = Enum.Parse<OrderStatus>(reader.GetString(4)),
+            DeliveryStreet = reader.GetString(5),
+            DeliveryBarangay = reader.IsDBNull(6) ? null : reader.GetString(6),
+            DeliveryCity = reader.GetString(7),
+            DeliveryLat = reader.IsDBNull(8) ? null : reader.GetDecimal(8),
+            DeliveryLng = reader.IsDBNull(9) ? null : reader.GetDecimal(9),
+            Subtotal = reader.GetDecimal(10),
+            DeliveryFee = reader.GetDecimal(11),
+            DiscountAmount = reader.GetDecimal(12),
+            TotalAmount = reader.GetDecimal(13),
+            CustomerNote = reader.IsDBNull(14) ? null : reader.GetString(14),
+            PlacedAt = reader.GetFieldValue<DateTimeOffset>(15),
+            ConfirmedAt = reader.IsDBNull(16) ? null : reader.GetFieldValue<DateTimeOffset>(16),
+            ReadyAt = reader.IsDBNull(17) ? null : reader.GetFieldValue<DateTimeOffset>(17),
+            PickedUpAt = reader.IsDBNull(18) ? null : reader.GetFieldValue<DateTimeOffset>(18),
+            DeliveredAt = reader.IsDBNull(19) ? null : reader.GetFieldValue<DateTimeOffset>(19),
+            CancelledAt = reader.IsDBNull(20) ? null : reader.GetFieldValue<DateTimeOffset>(20),
+            UpdatedAt = reader.GetFieldValue<DateTimeOffset>(21)
+        };
+    }
+
+    private static bool IsTransientOrderWriteTimeout(DbUpdateException ex)
+    {
+        for (Exception? current = ex; current is not null; current = current.InnerException)
+        {
+            if (current is TimeoutException)
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool IsPickup(string? fulfillmentType) =>
         string.Equals(fulfillmentType, "pickup", StringComparison.OrdinalIgnoreCase);
 }
@@ -302,6 +445,12 @@ public record CustomerOrderItemDto(
     List<CustomerOrderOptionDto> Options
 );
 
+public record RiderSummaryDto(
+    string FullName,
+    string? MotorModel,
+    string? ContactNumber
+);
+
 public record CustomerOrderDto(
     Guid Id,
     string OrderNumber,
@@ -322,6 +471,7 @@ public record CustomerOrderDto(
     DateTimeOffset? DeliveredAt,
     DateTimeOffset? CancelledAt,
     DateTimeOffset UpdatedAt,
+    RiderSummaryDto? Rider,
     List<CustomerOrderItemDto> Items
 );
 
@@ -360,53 +510,63 @@ internal static class CustomerOrderStore
         var sql = orderId is null
             ? """
             SELECT
-                id,
-                order_number,
-                rider_id,
-                status::text,
-                delivery_street,
-                delivery_barangay,
-                delivery_city,
-                subtotal,
-                delivery_fee,
-                discount_amount,
-                total_amount,
-                customer_note,
-                placed_at,
-                confirmed_at,
-                ready_at,
-                picked_up_at,
-                delivered_at,
-                cancelled_at,
-                updated_at
+                orders.id,
+                orders.order_number,
+                orders.rider_id,
+                orders.status::text,
+                orders.delivery_street,
+                orders.delivery_barangay,
+                orders.delivery_city,
+                orders.subtotal,
+                orders.delivery_fee,
+                orders.discount_amount,
+                orders.total_amount,
+                orders.customer_note,
+                orders.placed_at,
+                orders.confirmed_at,
+                orders.ready_at,
+                orders.picked_up_at,
+                orders.delivered_at,
+                orders.cancelled_at,
+                orders.updated_at,
+                rider.full_name,
+                profile.motor_model,
+                profile.contact_number
             FROM orders
-            WHERE customer_id = @customer_id
-            ORDER BY placed_at DESC
+            LEFT JOIN users AS rider ON rider.id = orders.rider_id
+            LEFT JOIN rider_profiles AS profile ON profile.user_id = orders.rider_id
+            WHERE orders.customer_id = @customer_id
+            ORDER BY orders.placed_at DESC
             """
             : """
             SELECT
-                id,
-                order_number,
-                rider_id,
-                status::text,
-                delivery_street,
-                delivery_barangay,
-                delivery_city,
-                subtotal,
-                delivery_fee,
-                discount_amount,
-                total_amount,
-                customer_note,
-                placed_at,
-                confirmed_at,
-                ready_at,
-                picked_up_at,
-                delivered_at,
-                cancelled_at,
-                updated_at
+                orders.id,
+                orders.order_number,
+                orders.rider_id,
+                orders.status::text,
+                orders.delivery_street,
+                orders.delivery_barangay,
+                orders.delivery_city,
+                orders.subtotal,
+                orders.delivery_fee,
+                orders.discount_amount,
+                orders.total_amount,
+                orders.customer_note,
+                orders.placed_at,
+                orders.confirmed_at,
+                orders.ready_at,
+                orders.picked_up_at,
+                orders.delivered_at,
+                orders.cancelled_at,
+                orders.updated_at,
+                rider.full_name,
+                profile.motor_model,
+                profile.contact_number
             FROM orders
-            WHERE customer_id = @customer_id AND id = @order_id
-            ORDER BY placed_at DESC
+            LEFT JOIN users AS rider ON rider.id = orders.rider_id
+            LEFT JOIN rider_profiles AS profile ON profile.user_id = orders.rider_id
+            WHERE orders.customer_id = @customer_id AND orders.id = @order_id
+            ORDER BY orders.placed_at DESC
             """;
 
         await using var command = CreateCommand(connection, sql);
@@ -527,6 +687,13 @@ internal static class CustomerOrderStore
             reader.IsDBNull(16) ? null : reader.GetFieldValue<DateTimeOffset>(16),
             reader.IsDBNull(17) ? null : reader.GetFieldValue<DateTimeOffset>(17),
             reader.GetFieldValue<DateTimeOffset>(18),
+            reader.IsDBNull(2)
+                ? null
+                : new RiderSummaryDto(
+                    reader.IsDBNull(19) ? "Assigned rider" : reader.GetString(19),
+                    reader.IsDBNull(20) ? null : reader.GetString(20),
+                    reader.IsDBNull(21) ? null : reader.GetString(21)
+                ),
             []
         );
 

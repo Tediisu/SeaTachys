@@ -33,7 +33,7 @@ export default function CartScreen() {
               <Button
                 label="Browse Menu"
                 variant="secondary"
-                onPress={() => router.replace('/(user)/Home')}
+                onPress={() => router.replace('/(user)/(tabs)/Home')}
                 size="large"
                 radius={20}
                 style={{ paddingHorizontal: 0, width: '100%' }}

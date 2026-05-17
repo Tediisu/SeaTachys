@@ -54,6 +54,7 @@ public class AuthController : ControllerBase
 
         var user = new User
         {
+            Id = Guid.CreateVersion7(),
             FullName = req.FullName.Trim(),
             Email = normalizedEmail,
             PhoneNumber = req.PhoneNumber,

@@ -87,7 +87,7 @@ export default function AccountScreen() {
               icon={<Feather name="map-pin" size={18} color="#0F6E56" />}
               label="Saved addresses"
               caption="Manage your delivery locations"
-              onPress={() => Alert.alert('Coming soon', 'Address management can be added next.')}
+              onPress={() => router.push('/(user)/UserProfile')}
             />
             <AccountRow
               icon={<Ionicons name="notifications-outline" size={18} color="#5D24E1" />}

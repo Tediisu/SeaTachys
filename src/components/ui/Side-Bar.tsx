@@ -110,7 +110,7 @@ export default function SideBar({ isOpen, onClose }: Props) {
               label="Cart"
               onPress={() => {
                 onClose();
-                router.push('/(user)/Cart');
+                router.push('/(user)/(tabs)/Cart');
               }}
             />
             <MenuItem icon={<Feather name="heart" size={18} color="#db24e1" />} label="Favorites" />
