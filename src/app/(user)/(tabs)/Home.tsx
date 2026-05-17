@@ -1,6 +1,7 @@
-import { Animated, StyleSheet, View, Text, Pressable, TextInput, ScrollView, FlatList, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, StyleSheet, View, Text, Pressable, TextInput, ScrollView, FlatList, Modal, RefreshControl, useWindowDimensions, type NativeSyntheticEvent, type NativeScrollEvent, type ImageSourcePropType } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,6 +20,11 @@ import { useAppBootstrap } from '@/hooks/AppBootstrapContext';
 import { optimizeImageUrl } from '@/utils/image';
 import Skeleton from '@/components/ui/Skeleton';
 import { HomeScreenSkeleton } from '@/components/ui/SkeletonScreens';
+import {
+  addressService,
+  formatSavedAddress,
+  type SavedAddress,
+} from '@/services/address.services';
 
 const categoryImageMap: Record<string, number> = {
   All: require('@/assets/imgs/wave.png'),
@@ -98,6 +104,26 @@ export default function Home() {
   const [promoImageReady, setPromoImageReady] = useState<Record<string, boolean>>({});
   const [topBannerImageReady, setTopBannerImageReady] = useState(false);
   const [countdownNow, setCountdownNow] = useState(Date.now());
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [defaultAddress, setDefaultAddress] = useState<SavedAddress | null>(null);
+  const [addressPickerVisible, setAddressPickerVisible] = useState(false);
+  const [savingDefaultAddressId, setSavingDefaultAddressId] = useState<string | null>(null);
+
+  const loadAddresses = useCallback(async () => {
+    try {
+      const nextAddresses = await addressService.list();
+      setAddresses(nextAddresses);
+      setDefaultAddress(nextAddresses.find((address) => address.isDefault) ?? null);
+    } catch (error) {
+      console.log('Home address refresh failed:', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAddresses();
+    }, [loadAddresses])
+  );
 
   const ui = useMemo(() => {
     const isCompact = width < 390;
@@ -563,16 +589,20 @@ export default function Home() {
                       marginBottom: topPromoHeaderMarginBottom,
                     },
                   ]}>
-                  <View style={styles.topAddressRow}>
+                  <Pressable style={styles.topAddressRow} onPress={() => setAddressPickerVisible(true)}>
                     <View style={styles.topAddressIconWrap}>
                       <Ionicons name="location-outline" size={18} color="#FFFFFF" />
                     </View>
                     <View style={styles.topAddressTextWrap}>
-                      <ThemedText style={styles.topAddressTitle} numberOfLines={1}>Rawr Bldg</ThemedText>
-                      <ThemedText style={styles.topAddressSubtitle} numberOfLines={1}>Delivered near your campus stop</ThemedText>
+                      <ThemedText style={styles.topAddressTitle} numberOfLines={1}>
+                        {defaultAddress?.label || (defaultAddress ? 'Default address' : 'Add delivery address')}
+                      </ThemedText>
+                      <ThemedText style={styles.topAddressSubtitle} numberOfLines={1}>
+                        {defaultAddress ? formatSavedAddress(defaultAddress) : 'Choose where orders should arrive'}
+                      </ThemedText>
                     </View>
-                  </View>
-                  <Pressable style={styles.topPromoActionIcon} onPress={() => router.push('/(user)/Account')}>
+                  </Pressable>
+                  <Pressable style={styles.topPromoActionIcon} onPress={() => router.push('/(user)/(tabs)/Account')}>
                     <Ionicons name="heart-outline" size={18} color="#FFFFFF" />
                   </Pressable>
                 </Animated.View>
@@ -850,6 +880,66 @@ export default function Home() {
         )}
 
       </SafeAreaView>
+      <Modal visible={addressPickerVisible} transparent animationType="slide" onRequestClose={() => setAddressPickerVisible(false)}>
+        <View style={styles.addressModalBackdrop}>
+          <View style={styles.addressModal}>
+            <View style={styles.addressModalHeader}>
+              <View>
+                <ThemedText style={styles.addressModalTitle}>Delivery address</ThemedText>
+                <ThemedText style={styles.addressModalCaption}>Choose the default shown on home and checkout.</ThemedText>
+              </View>
+              <Pressable style={styles.addressModalClose} onPress={() => setAddressPickerVisible(false)}>
+                <Ionicons name="close" size={20} color="#111827" />
+              </Pressable>
+            </View>
+
+            {addresses.length === 0 ? (
+              <View style={styles.addressModalEmpty}>
+                <ThemedText style={styles.addressModalEmptyTitle}>No saved addresses</ThemedText>
+                <ThemedText style={styles.addressModalCaption}>Add one before placing a delivery order.</ThemedText>
+              </View>
+            ) : (
+              addresses.map((address) => (
+                <Pressable
+                  key={address.id}
+                  style={[styles.addressChoice, address.isDefault && styles.addressChoiceSelected]}
+                  onPress={async () => {
+                    setSavingDefaultAddressId(address.id);
+                    try {
+                      await addressService.setDefault(address.id);
+                      await loadAddresses();
+                      setAddressPickerVisible(false);
+                    } finally {
+                      setSavingDefaultAddressId(null);
+                    }
+                  }}
+                  disabled={savingDefaultAddressId === address.id}
+                >
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={styles.addressChoiceLabel}>{address.label || 'Address'}</ThemedText>
+                    <ThemedText style={styles.addressChoiceText}>{formatSavedAddress(address)}</ThemedText>
+                  </View>
+                  <Ionicons
+                    name={address.isDefault ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={address.isDefault ? '#FF8E00' : '#94A3B8'}
+                  />
+                </Pressable>
+              ))
+            )}
+
+            <Pressable
+              style={styles.manageAddressesButton}
+              onPress={() => {
+                setAddressPickerVisible(false);
+                router.push('/(user)/UserProfile');
+              }}
+            >
+              <ThemedText style={styles.manageAddressesButtonText}>Manage addresses</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -988,6 +1078,88 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  addressModalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(15,23,42,0.42)',
+  },
+  addressModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 18,
+    gap: 12,
+  },
+  addressModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  addressModalTitle: {
+    color: '#111827',
+    fontSize: FontSize.title,
+    fontWeight: '900',
+  },
+  addressModalCaption: {
+    color: '#6B7280',
+    fontSize: FontSize.xs,
+    marginTop: 3,
+  },
+  addressModalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F6FA',
+  },
+  addressModalEmpty: {
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    padding: 14,
+  },
+  addressModalEmptyTitle: {
+    color: '#111827',
+    fontSize: FontSize.body,
+    fontWeight: '900',
+  },
+  addressChoice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 14,
+  },
+  addressChoiceSelected: {
+    borderColor: '#FF8E00',
+    backgroundColor: '#FFF4E7',
+  },
+  addressChoiceLabel: {
+    color: '#111827',
+    fontSize: FontSize.body,
+    fontWeight: '900',
+  },
+  addressChoiceText: {
+    color: '#6B7280',
+    fontSize: FontSize.small,
+    marginTop: 3,
+  },
+  manageAddressesButton: {
+    minHeight: 48,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0F2F57',
+    marginTop: 4,
+  },
+  manageAddressesButtonText: {
+    color: '#FFFFFF',
+    fontSize: FontSize.body,
+    fontWeight: '900',
   },
   topPromoBannerCard: {
     zIndex: 2,

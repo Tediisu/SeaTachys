@@ -1,7 +1,7 @@
 import { apiFetch } from './api';
 
 const ORDER_READ_TIMEOUT_MS = 30000;
-const ORDER_WRITE_TIMEOUT_MS = 30000;
+const ORDER_WRITE_TIMEOUT_MS = 45000;
 
 export type OrderQuoteItemInput = {
   menuItemId: string;
@@ -46,6 +46,12 @@ export type OrderItem = {
   options: OrderOption[];
 };
 
+export type RiderSummary = {
+  fullName: string;
+  motorModel?: string | null;
+  contactNumber?: string | null;
+};
+
 export type CustomerOrder = {
   id: string;
   orderNumber: string;
@@ -66,6 +72,7 @@ export type CustomerOrder = {
   deliveredAt?: string | null;
   cancelledAt?: string | null;
   updatedAt: string;
+  rider?: RiderSummary | null;
   items: OrderItem[];
 };
 

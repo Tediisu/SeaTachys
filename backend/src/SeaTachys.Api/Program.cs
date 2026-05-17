@@ -45,11 +45,7 @@ builder.Services.AddSingleton(new DatabaseConnectionString(connString));
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseNpgsql(connString, npgsql =>
-        npgsql.EnableRetryOnFailure(
-                  maxRetryCount: 1,
-                  maxRetryDelay: TimeSpan.FromSeconds(2),
-                  errorCodesToAdd: null)
-              .CommandTimeout(12)
+        npgsql.CommandTimeout(30)
               .MapEnum<UserRole>("user_role")
               .MapEnum<OrderStatus>("order_status")
               .MapEnum<PaymentMethod>("payment_method")
@@ -168,7 +164,9 @@ static string NormalizeConnectionString(string rawConnectionString)
 
     builder.Multiplexing = false;
     builder.MaxAutoPrepare = 0;
-    builder.Pooling = true;
+    // The local demo backend talks to a remote Supabase database. Reusing stale
+    // pooled sockets has caused intermittent 30s hangs after idle periods.
+    builder.Pooling = false;
 
     return builder.ConnectionString;
 }

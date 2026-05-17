@@ -133,7 +133,7 @@ export default function ProductDetailScreen() {
       options: selectedChoiceDetails,
     });
 
-    router.push('/(user)/Cart');
+    router.push('/(user)/(tabs)/Cart');
   };
 
   const isResolvingCurrentItem = loading || !item || item.id !== requestedId;

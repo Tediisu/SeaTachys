@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import Button from '@/components/ui/Button';
 import { FontSize } from '@/constants/theme';
 import { ordersService, type CustomerOrder, type OrderStatus } from '@/services/orders.services';
+import { orderMessagesService, type OrderMessage } from '@/services/order-messages.services';
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Order placed',
@@ -105,6 +106,8 @@ export default function OrderStatusScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTip, setSelectedTip] = useState<number | null>(null);
   const [chatDraft, setChatDraft] = useState('');
+  const [messages, setMessages] = useState<OrderMessage[]>([]);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const loadOrder = async (showRefreshState = false) => {
     if (!id) return;
@@ -118,6 +121,11 @@ export default function OrderStatusScreen() {
     try {
       const nextOrder = await ordersService.getById(id);
       setOrder(nextOrder);
+      try {
+        setMessages(await orderMessagesService.list(id));
+      } catch (chatError) {
+        console.log('Order chat refresh failed:', chatError);
+      }
     } catch (err: any) {
       Alert.alert('Unable to load order', err.message || 'Please try again.');
     } finally {
@@ -155,7 +163,7 @@ export default function OrderStatusScreen() {
           <Button
             label="Back to menu"
             variant="secondary"
-            onPress={() => router.replace('/(user)/Home')}
+            onPress={() => router.replace('/(user)/(tabs)/Home')}
             size="large"
             radius={20}
             style={{ paddingHorizontal: 0, width: '100%' }}
@@ -167,13 +175,28 @@ export default function OrderStatusScreen() {
 
   const riderAssigned = Boolean(order.riderId);
   const activeStageIndex = currentStageIndex(order.status);
+  const sendMessage = async () => {
+    const message = chatDraft.trim();
+    if (!message || !id || !riderAssigned || sendingMessage) return;
+
+    setSendingMessage(true);
+    try {
+      const created = await orderMessagesService.send(id, message);
+      setMessages((current) => [...current, created]);
+      setChatDraft('');
+    } catch (err: any) {
+      Alert.alert('Unable to send message', err.message || 'Please try again.');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.headerRow}>
-            <Pressable style={styles.iconButton} onPress={() => router.replace('/(user)/Home')}>
+            <Pressable style={styles.iconButton} onPress={() => router.back()}>
               <Ionicons name="chevron-back" size={22} color="#0F2F57" />
             </Pressable>
             <View style={{ flex: 1 }}>
@@ -282,6 +305,30 @@ export default function OrderStatusScreen() {
             </View>
           </View>
 
+          {riderAssigned ? (
+            <View style={styles.riderCard}>
+              <View style={styles.riderCardHeader}>
+                <View style={styles.riderAvatar}>
+                  <Ionicons name="bicycle" size={20} color="#0F2F57" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <ThemedText style={styles.riderCardEyebrow}>Your rider</ThemedText>
+                  <ThemedText style={styles.riderCardName}>{order.rider?.fullName ?? 'Assigned rider'}</ThemedText>
+                </View>
+              </View>
+              <View style={styles.riderMetaRow}>
+                <View style={styles.riderMetaBlock}>
+                  <ThemedText style={styles.riderMetaLabel}>Motor</ThemedText>
+                  <ThemedText style={styles.riderMetaValue}>{order.rider?.motorModel ?? 'Not set yet'}</ThemedText>
+                </View>
+                <View style={styles.riderMetaBlock}>
+                  <ThemedText style={styles.riderMetaLabel}>Contact</ThemedText>
+                  <ThemedText style={styles.riderMetaValue}>{order.rider?.contactNumber ?? 'Not set yet'}</ThemedText>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           <View style={styles.chatCard}>
             <View style={styles.chatHeader}>
               <View>
@@ -294,13 +341,42 @@ export default function OrderStatusScreen() {
             </View>
 
             <View style={styles.chatThread}>
-              <View style={styles.systemBubble}>
-                <ThemedText style={styles.systemBubbleText}>
-                  {riderAssigned
-                    ? 'Your rider can now receive messages about this delivery.'
-                    : 'A rider will appear here once one is assigned to your order.'}
-                </ThemedText>
-              </View>
+              {messages.length === 0 ? (
+                <View style={styles.systemBubble}>
+                  <ThemedText style={styles.systemBubbleText}>
+                    {riderAssigned
+                      ? 'Your rider can now receive messages about this delivery.'
+                      : 'A rider will appear here once one is assigned to your order.'}
+                  </ThemedText>
+                </View>
+              ) : (
+                messages.map((message) => (
+                  <View
+                    key={message.id}
+                    style={[
+                      styles.messageBubble,
+                      message.senderRole === 'customer' ? styles.customerBubble : styles.riderBubble,
+                    ]}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.messageSender,
+                        message.senderRole === 'customer' && styles.customerBubbleText,
+                      ]}
+                    >
+                      {message.senderRole === 'customer' ? 'You' : message.senderName}
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.messageBody,
+                        message.senderRole === 'customer' && styles.customerBubbleText,
+                      ]}
+                    >
+                      {message.message}
+                    </ThemedText>
+                  </View>
+                ))
+              )}
             </View>
 
             <View style={styles.chatComposer}>
@@ -314,10 +390,14 @@ export default function OrderStatusScreen() {
               />
               <Pressable
                 style={[styles.sendButton, (!riderAssigned || !chatDraft.trim()) && styles.sendButtonDisabled]}
-                disabled={!riderAssigned || !chatDraft.trim()}
-                onPress={() => Alert.alert('Chat coming next', 'The chat UI is ready; message storage can be wired next.')}
+                disabled={!riderAssigned || !chatDraft.trim() || sendingMessage}
+                onPress={sendMessage}
               >
-                <Ionicons name="send" size={16} color="#FFFFFF" />
+                {sendingMessage ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="send" size={16} color="#FFFFFF" />
+                )}
               </Pressable>
             </View>
 
@@ -526,6 +606,58 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  riderCard: {
+    backgroundColor: '#0F2F57',
+    borderRadius: 24,
+    padding: 18,
+    gap: 14,
+  },
+  riderCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  riderAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DDE8F4',
+  },
+  riderCardEyebrow: {
+    color: '#9FC2E7',
+    fontSize: FontSize.xs,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  riderCardName: {
+    color: '#FFFFFF',
+    fontSize: FontSize.body,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  riderMetaRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  riderMetaBlock: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  riderMetaLabel: {
+    color: '#9FC2E7',
+    fontSize: FontSize.xs,
+  },
+  riderMetaValue: {
+    color: '#FFFFFF',
+    fontSize: FontSize.small,
+    fontWeight: '800',
+    marginTop: 3,
+  },
   sectionTitle: {
     color: '#111827',
     fontSize: FontSize.body,
@@ -605,6 +737,7 @@ const styles = StyleSheet.create({
   chatThread: {
     minHeight: 72,
     justifyContent: 'center',
+    gap: 10,
   },
   systemBubble: {
     alignSelf: 'flex-start',
@@ -619,6 +752,36 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: FontSize.small,
     lineHeight: 20,
+  },
+  messageBubble: {
+    maxWidth: '88%',
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 3,
+  },
+  customerBubble: {
+    alignSelf: 'flex-end',
+    borderBottomRightRadius: 6,
+    backgroundColor: '#0F2F57',
+  },
+  riderBubble: {
+    alignSelf: 'flex-start',
+    borderBottomLeftRadius: 6,
+    backgroundColor: '#F3F6FA',
+  },
+  messageSender: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  messageBody: {
+    color: '#111827',
+    fontSize: FontSize.small,
+    lineHeight: 20,
+  },
+  customerBubbleText: {
+    color: '#FFFFFF',
   },
   chatComposer: {
     flexDirection: 'row',

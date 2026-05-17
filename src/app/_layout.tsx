@@ -13,6 +13,7 @@ function AppShell() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const inAuthGroup = segments[0] === '(auth)';
+  const riderHomeHref = '/(rider)/Home' as any;
 
   if (loading && !user) {
     return <AppBootSkeleton />;
@@ -26,8 +27,10 @@ function AppShell() {
     switch (user.role) {
       case 'admin':
         return <Redirect href="/(admin)/Dashboard" />;
+      case 'rider':
+        return <Redirect href={riderHomeHref} />;
       case 'customer':
-        return <Redirect href="/(user)/Home" />;
+        return <Redirect href="/(user)/(tabs)/Home" />;
       default:
         return <Redirect href="/(guest)/Home" />;
     }

@@ -1,6 +1,7 @@
 import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +11,11 @@ import { useCart } from '@/hooks/use-cart';
 import { FontSize } from '@/constants/theme';
 import { ordersService, type FulfillmentType, type OrderQuoteResponse } from '@/services/orders.services';
 import { QuoteSummarySkeleton } from '@/components/ui/SkeletonScreens';
+import {
+  addressService,
+  formatSavedAddress,
+  type SavedAddress,
+} from '@/services/address.services';
 
 const paymentMethods = [
   { id: 'gcash', label: 'GCash' },
@@ -21,9 +27,8 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const { items, subtotal, clearCart } = useCart();
 
-  const [street, setStreet] = useState('');
-  const [barangay, setBarangay] = useState('');
-  const [city, setCity] = useState('');
+  const [defaultAddress, setDefaultAddress] = useState<SavedAddress | null>(null);
+  const [loadingAddress, setLoadingAddress] = useState(true);
   const [customerNote, setCustomerNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash_on_delivery');
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('delivery');
@@ -40,6 +45,23 @@ export default function CheckoutScreen() {
         specialInstructions: item.specialInstructions,
       })),
     [items]
+  );
+
+  const loadDefaultAddress = useCallback(async () => {
+    setLoadingAddress(true);
+    try {
+      setDefaultAddress(await addressService.getDefault());
+    } catch (error) {
+      console.log('Checkout address refresh failed:', error);
+    } finally {
+      setLoadingAddress(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDefaultAddress();
+    }, [loadDefaultAddress])
   );
 
   useEffect(() => {
@@ -63,8 +85,15 @@ export default function CheckoutScreen() {
   }, [fulfillmentType, items, quoteItems]);
 
   const handlePlaceOrder = async () => {
-    if (fulfillmentType === 'delivery' && (!street.trim() || !city.trim())) {
-      Alert.alert('Missing address', 'Please enter your street and city.');
+    if (fulfillmentType === 'delivery' && !defaultAddress) {
+      Alert.alert(
+        'Default address required',
+        'Add a default address before placing a delivery order.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Add address', onPress: () => router.push('/(user)/UserProfile') },
+        ]
+      );
       return;
     }
 
@@ -78,9 +107,9 @@ export default function CheckoutScreen() {
     try {
       const response = await ordersService.create({
         fulfillmentType,
-        deliveryStreet: fulfillmentType === 'delivery' ? street.trim() : '',
-        deliveryBarangay: fulfillmentType === 'delivery' ? barangay.trim() : '',
-        deliveryCity: fulfillmentType === 'delivery' ? city.trim() : '',
+        deliveryStreet: fulfillmentType === 'delivery' ? defaultAddress?.street ?? '' : '',
+        deliveryBarangay: fulfillmentType === 'delivery' ? defaultAddress?.barangay ?? '' : '',
+        deliveryCity: fulfillmentType === 'delivery' ? defaultAddress?.city ?? '' : '',
         customerNote: customerNote.trim()
           ? `${customerNote.trim()} | Payment: ${paymentMethod}`
           : `Payment: ${paymentMethod}`,
@@ -148,27 +177,29 @@ export default function CheckoutScreen() {
           {fulfillmentType === 'delivery' ? (
             <View style={styles.card}>
               <ThemedText style={styles.sectionTitle}>Delivery Address</ThemedText>
-              <TextInput
-                style={styles.input}
-                placeholder="Street address"
-                placeholderTextColor="#6B7280"
-                value={street}
-                onChangeText={setStreet}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Barangay / Area"
-                placeholderTextColor="#6B7280"
-                value={barangay}
-                onChangeText={setBarangay}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="City"
-                placeholderTextColor="#6B7280"
-                value={city}
-                onChangeText={setCity}
-              />
+              {loadingAddress ? (
+                <ThemedText style={styles.addressHint}>Loading your default address...</ThemedText>
+              ) : defaultAddress ? (
+                <View style={styles.selectedAddressCard}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={styles.selectedAddressLabel}>{defaultAddress.label || 'Default address'}</ThemedText>
+                    <ThemedText style={styles.selectedAddressText}>{formatSavedAddress(defaultAddress)}</ThemedText>
+                  </View>
+                  <Pressable onPress={() => router.push('/(user)/UserProfile')}>
+                    <ThemedText style={styles.changeAddressText}>Change</ThemedText>
+                  </Pressable>
+                </View>
+              ) : (
+                <View style={styles.missingAddressCard}>
+                  <ThemedText style={styles.missingAddressTitle}>No default address saved</ThemedText>
+                  <ThemedText style={styles.addressHint}>
+                    Add one before placing a delivery order.
+                  </ThemedText>
+                  <Pressable style={styles.addAddressButton} onPress={() => router.push('/(user)/UserProfile')}>
+                    <ThemedText style={styles.addAddressButtonText}>Add default address</ThemedText>
+                  </Pressable>
+                </View>
+              )}
             </View>
           ) : null}
 
@@ -316,6 +347,59 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontSize: FontSize.body,
     fontWeight: '800',
+  },
+  selectedAddressCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    padding: 14,
+  },
+  selectedAddressLabel: {
+    color: '#111827',
+    fontSize: FontSize.body,
+    fontWeight: '900',
+  },
+  selectedAddressText: {
+    color: '#6B7280',
+    fontSize: FontSize.small,
+    lineHeight: 20,
+    marginTop: 3,
+  },
+  changeAddressText: {
+    color: '#FF8E00',
+    fontSize: FontSize.small,
+    fontWeight: '900',
+  },
+  missingAddressCard: {
+    borderRadius: 18,
+    backgroundColor: '#FFF4E7',
+    padding: 14,
+    gap: 5,
+  },
+  missingAddressTitle: {
+    color: '#111827',
+    fontSize: FontSize.body,
+    fontWeight: '900',
+  },
+  addressHint: {
+    color: '#6B7280',
+    fontSize: FontSize.small,
+    lineHeight: 20,
+  },
+  addAddressButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#0F2F57',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  addAddressButtonText: {
+    color: '#FFFFFF',
+    fontSize: FontSize.small,
+    fontWeight: '900',
   },
   input: {
     backgroundColor: '#F8FAFC',

@@ -17,7 +17,7 @@ const getHomeRoute = (role: string) => {
     case 'admin':
       return '/(admin)/Dashboard';
     case 'customer':
-      return '/(user)/Home';
+      return '/(user)/(tabs)/Home';
     default:
       return '/(guest)/Home';
   }

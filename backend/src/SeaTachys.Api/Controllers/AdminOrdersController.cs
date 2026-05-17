@@ -34,20 +34,26 @@ public class AdminOrdersController : ControllerBase
     [HttpPost("{orderId:guid}/status")]
     public async Task<IActionResult> UpdateStatus(Guid orderId, UpdateOrderStatusRequest req)
     {
-        var currentStatus = await AdminOrderStore.GetStatusAsync(
+        var currentOrder = await AdminOrderStore.GetOrderSummaryAsync(
             _databaseConnectionString.Value,
             orderId,
             HttpContext.RequestAborted
         );
 
-        if (currentStatus is null)
+        if (currentOrder is null)
         {
             return NotFound();
         }
 
-        if (!OrderStatusRules.CanTransition(currentStatus.Value, req.Status))
+        if (!OrderStatusRules.CanTransition(currentOrder.Status, req.Status))
         {
-            return BadRequest($"Invalid transition: {currentStatus} -> {req.Status}");
+            return BadRequest($"Invalid transition: {currentOrder.Status} -> {req.Status}");
+        }
+
+        var effectiveRiderId = req.RiderId ?? currentOrder.RiderId;
+        if (RequiresAssignedRider(currentOrder, req.Status) && effectiveRiderId is null)
+        {
+            return BadRequest("Assign a rider before moving a delivery order beyond ready for pickup.");
         }
 
         var updated = await AdminOrderStore.UpdateStatusAsync(
@@ -59,6 +65,10 @@ public class AdminOrdersController : ControllerBase
 
         return updated is null ? NotFound() : Ok(updated);
     }
+
+    private static bool RequiresAssignedRider(AdminOrderSummaryDto order, OrderStatus nextStatus) =>
+        !string.IsNullOrWhiteSpace(order.DeliveryStreet) &&
+        nextStatus is OrderStatus.picked_up or OrderStatus.on_the_way or OrderStatus.delivered;
 }
 
 public record UpdateOrderStatusRequest(
@@ -117,6 +127,12 @@ public record AdminOrderStatusDto(
     DateTimeOffset? DeliveredAt,
     DateTimeOffset? CancelledAt,
     DateTimeOffset UpdatedAt
+);
+
+public record AdminOrderSummaryDto(
+    OrderStatus Status,
+    Guid? RiderId,
+    string DeliveryStreet
 );
 
 internal static class AdminOrderStore
@@ -271,7 +287,7 @@ internal static class AdminOrderStore
             .ToList();
     }
 
-    internal static async Task<OrderStatus?> GetStatusAsync(
+    internal static async Task<AdminOrderSummaryDto?> GetOrderSummaryAsync(
         string connectionString,
         Guid orderId,
         CancellationToken cancellationToken
@@ -279,16 +295,23 @@ internal static class AdminOrderStore
     {
         await using var connection = await OpenAsync(connectionString, cancellationToken);
         await using var command = CreateCommand(connection, """
-            SELECT status::text
+            SELECT status::text, rider_id, delivery_street
             FROM orders
             WHERE id = @id
             """);
         command.Parameters.AddWithValue("id", orderId);
 
-        var rawStatus = await command.ExecuteScalarAsync(cancellationToken);
-        return rawStatus is string status
-            ? Enum.Parse<OrderStatus>(status, ignoreCase: true)
-            : null;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new AdminOrderSummaryDto(
+            Enum.Parse<OrderStatus>(reader.GetString(0), ignoreCase: true),
+            reader.IsDBNull(1) ? null : reader.GetGuid(1),
+            reader.GetString(2)
+        );
     }
 
     internal static async Task<AdminOrderStatusDto?> UpdateStatusAsync(
@@ -316,6 +339,48 @@ internal static class AdminOrderStore
         command.Parameters.AddWithValue("id", orderId);
         command.Parameters.AddWithValue("status", request.Status.ToString());
         command.Parameters.AddWithValue("rider_id", request.RiderId is null ? DBNull.Value : request.RiderId);
+        command.Parameters.AddWithValue("now", now);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new AdminOrderStatusDto(
+            reader.GetGuid(0),
+            Enum.Parse<OrderStatus>(reader.GetString(1), ignoreCase: true),
+            reader.IsDBNull(2) ? null : reader.GetGuid(2),
+            reader.IsDBNull(3) ? null : reader.GetFieldValue<DateTimeOffset>(3),
+            reader.IsDBNull(4) ? null : reader.GetFieldValue<DateTimeOffset>(4),
+            reader.IsDBNull(5) ? null : reader.GetFieldValue<DateTimeOffset>(5),
+            reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6),
+            reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+            reader.GetFieldValue<DateTimeOffset>(8)
+        );
+    }
+
+    internal static async Task<AdminOrderStatusDto?> AcceptAsync(
+        string connectionString,
+        Guid orderId,
+        Guid riderId,
+        CancellationToken cancellationToken
+    )
+    {
+        var now = DateTimeOffset.UtcNow;
+        await using var connection = await OpenAsync(connectionString, cancellationToken);
+        await using var command = CreateCommand(connection, """
+            UPDATE orders
+            SET rider_id = @rider_id,
+                updated_at = @now
+            WHERE id = @id
+              AND status = 'ready_for_pickup'::order_status
+              AND rider_id IS NULL
+              AND delivery_street <> ''
+            RETURNING id, status::text, rider_id, confirmed_at, ready_at, picked_up_at, delivered_at, cancelled_at, updated_at
+            """);
+        command.Parameters.AddWithValue("id", orderId);
+        command.Parameters.AddWithValue("rider_id", riderId);
         command.Parameters.AddWithValue("now", now);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
